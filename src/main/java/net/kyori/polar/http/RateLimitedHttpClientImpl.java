@@ -132,6 +132,7 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
         final Entry entry = this.queue.peek();
         this.processEntry(entry);
       }
+      this.future = null;
     }
 
     private void processEntry(final Entry entry) {

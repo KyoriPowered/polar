@@ -32,6 +32,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 final class BuilderImpl implements Embed.Builder {
@@ -56,12 +58,14 @@ final class BuilderImpl implements Embed.Builder {
 
   @Override
   public Embed.@NonNull Builder title(final @Nullable String title) {
+    checkArgument(title.length() <= Embed.MAX_TITLE_LENGTH, "title.length() > %s", Embed.MAX_TITLE_LENGTH);
     this.title = title;
     return this;
   }
 
   @Override
   public Embed.@NonNull Builder description(final @Nullable String description) {
+    checkArgument(description.length() <= Embed.MAX_DESCRIPTION_LENGTH, "description.length() > %s", Embed.MAX_DESCRIPTION_LENGTH);
     this.description = description;
     return this;
   }
@@ -116,14 +120,18 @@ final class BuilderImpl implements Embed.Builder {
 
   @Override
   public Embed.@NonNull Builder field(final @NonNull String name, final @NonNull String value, final boolean inline) {
+    checkState(this.fields.size() <= Embed.MAX_FIELD_COUNT, "cannot have more than %s fields", Embed.MAX_FIELD_COUNT);
     requireNonNull(name, "name");
+    checkArgument(name.length() <= Embed.Field.MAX_NAME_LENGTH, "name.length() > %s", Embed.Field.MAX_NAME_LENGTH);
     requireNonNull(value, "value");
+    checkArgument(value.length() <= Embed.Field.MAX_VALUE_LENGTH, "value.length() > %s", Embed.Field.MAX_VALUE_LENGTH);
     this.fields.add(new FieldImpl(name, value, inline));
     return this;
   }
 
   @Override
   public Embed.@NonNull Builder footerText(final @Nullable String text) {
+    checkArgument(text.length() <= Embed.Footer.MAX_TEXT_LENGTH, "text.length() > %s", Embed.Footer.MAX_TEXT_LENGTH);
     this.footerText = text;
     return this;
   }
