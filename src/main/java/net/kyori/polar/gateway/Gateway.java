@@ -53,6 +53,9 @@ import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.guild.role.event.GuildRoleCreateEvent;
 import net.kyori.kassel.guild.role.event.GuildRoleDeleteEvent;
 import net.kyori.kassel.snowflake.Snowflaked;
+import net.kyori.kassel.user.Activity;
+import net.kyori.kassel.user.Status;
+import net.kyori.lunar.EvenMoreObjects;
 import net.kyori.lunar.Optionals;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
@@ -64,6 +67,7 @@ import net.kyori.polar.guild.channel.GuildTextChannelImpl;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.shard.Shard;
 import net.kyori.polar.snowflake.SnowflakedImpl;
+import net.kyori.polar.user.Activities;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -78,6 +82,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -172,6 +177,22 @@ public final class Gateway extends WebSocketListener implements Connectable {
     this.state = State.RESUMING;
     LOGGER.debug("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
     this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
+  }
+
+  public void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName) {
+    this.ws.send(GatewayPayload.create(GatewayOpcode.STATUS_UPDATE, (d) -> {
+      d.addProperty("afk", false);
+      d.addProperty("status", status.name().toLowerCase(Locale.ENGLISH));
+      d.add("game", EvenMoreObjects.make(new JsonObject(), game -> {
+        if(activityType != null && activityName != null) {
+          game.addProperty("type", Activities.activity(activityType));
+          game.addProperty("name", activityName);
+        } else {
+          game.add("type", JsonNull.INSTANCE);
+          game.add("name", JsonNull.INSTANCE);
+        }
+      }));
+    }));
   }
 
   @Override

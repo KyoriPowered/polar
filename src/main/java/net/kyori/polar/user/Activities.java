@@ -21,16 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package net.kyori.polar.gateway;
+package net.kyori.polar.user;
 
-interface GatewayOpcode {
-  int DISPATCH = 0;
-  int HEARTBEAT = 1;
-  int IDENTIFY = 2;
-  int STATUS_UPDATE = 3;
-  int RESUME = 6;
-  int RECONNECT = 7;
-  int INVALID_SESSION = 9;
-  int HELLO = 10;
-  int HEARTBEAT_ACK = 11;
+import net.kyori.kassel.user.Activity;
+
+public interface Activities {
+  static int activity(final Activity activity) {
+    switch(activity) {
+      case GAME: return 0;
+      case LISTENING: return 2;
+    }
+    throw new IllegalArgumentException(activity.name());
+  }
 }

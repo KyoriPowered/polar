@@ -28,8 +28,11 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.kassel.user.Activity;
+import net.kyori.kassel.user.Status;
 import net.kyori.polar.gateway.Gateway;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +76,11 @@ public final class ShardImpl implements Shard {
   @Override
   public @NonNull Optional<Guild> removeGuild(final @Snowflake long id) {
     return Optional.ofNullable(this.guilds.remove(id));
+  }
+
+  @Override
+  public void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName) {
+    this.gateway.presence(status, activityType, activityName);
   }
 
   @Override

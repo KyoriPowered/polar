@@ -31,6 +31,8 @@ import net.kyori.kassel.Connectable;
 import net.kyori.kassel.client.Client;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.kassel.user.Activity;
+import net.kyori.kassel.user.Status;
 import net.kyori.kassel.user.User;
 import net.kyori.lunar.exception.Exceptions;
 import net.kyori.peppermint.Json;
@@ -39,6 +41,7 @@ import net.kyori.polar.shard.Shard;
 import net.kyori.polar.shard.ShardImpl;
 import net.kyori.polar.user.UserImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +57,10 @@ public final class ClientImpl implements Client {
   private final Long2ObjectMap<User> users = new Long2ObjectOpenHashMap<>();
   private final UserImpl.Factory userFactory;
   private final List<Shard> shards;
+  // Presence
+  private @NonNull Status status = Status.ONLINE;
+  private @Nullable Activity activityType;
+  private @Nullable String activityName;
 
   @Inject
   private ClientImpl(final PolarConfiguration configuration, final UserImpl.Factory userFactory, final ShardImpl.Factory shard) {
@@ -94,6 +101,23 @@ public final class ClientImpl implements Client {
   @Override
   public @NonNull Optional<User> user(final @Snowflake long id) {
     return Optional.ofNullable(this.users.get(id));
+  }
+
+  @Override
+  public void status(final @NonNull Status status) {
+    this.status = status;
+    this.presenceChanged();
+  }
+
+  @Override
+  public void activity(final @Nullable Activity activityType, final @Nullable String activityName) {
+    this.activityType = activityType;
+    this.activityName = activityName;
+    this.presenceChanged();
+  }
+
+  private void presenceChanged() {
+    this.shards.forEach(shard -> shard.presence(this.status, this.activityType, this.activityName));
   }
 
   public @NonNull User userOrCreate(final JsonObject json) {

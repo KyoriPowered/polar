@@ -26,7 +26,10 @@ package net.kyori.polar.shard;
 import net.kyori.kassel.Connectable;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.kassel.user.Activity;
+import net.kyori.kassel.user.Status;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -72,4 +75,13 @@ public interface Shard extends Connectable {
    * @return the guild
    */
   @NonNull Optional<Guild> removeGuild(final @Snowflake long id);
+
+  /**
+   * Sets the presence.
+   *
+   * @param status the status
+   * @param activityType the activity type
+   * @param activityName the activity name
+   */
+  void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName);
 }
