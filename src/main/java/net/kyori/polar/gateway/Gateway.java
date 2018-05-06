@@ -182,6 +182,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   public void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName) {
     this.ws.send(GatewayPayload.create(GatewayOpcode.STATUS_UPDATE, (d) -> {
       d.addProperty("afk", false);
+      d.add("since", JsonNull.INSTANCE);
       d.addProperty("status", status.name().toLowerCase(Locale.ENGLISH));
       d.add("game", EvenMoreObjects.make(new JsonObject(), game -> {
         if(activityType != null && activityName != null) {
