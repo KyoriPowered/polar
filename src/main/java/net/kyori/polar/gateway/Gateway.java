@@ -41,6 +41,7 @@ import net.kyori.kassel.channel.message.event.ChannelMessageDeleteEvent;
 import net.kyori.kassel.channel.message.event.ChannelMessageReactionAddEvent;
 import net.kyori.kassel.channel.message.event.ChannelMessageReactionClearEvent;
 import net.kyori.kassel.channel.message.event.ChannelMessageReactionRemoveEvent;
+import net.kyori.kassel.client.Client;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.event.GuildChannelCreateEvent;
 import net.kyori.kassel.guild.channel.event.GuildChannelDeleteEvent;
@@ -62,7 +63,6 @@ import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.ChannelTypes;
 import net.kyori.polar.channel.message.MessageImpl;
 import net.kyori.polar.channel.message.emoji.Emojis;
-import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.guild.GuildImpl;
 import net.kyori.polar.guild.channel.GuildTextChannelImpl;
 import net.kyori.polar.refresh.Refreshable;
@@ -103,7 +103,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   private final OkHttpClient httpClient;
   private final ScheduledExecutorService scheduler;
   private final EventBus<Object, Object> bus;
-  private final ClientImpl client;
+  private final Client client;
   private final Shard shard;
   private final GatewayUrl url;
 
@@ -123,7 +123,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   private long lastSequence = -1;
 
   @Inject
-  private Gateway(final PolarConfiguration configuration, final OkHttpClient httpClient, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final ClientImpl client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
+  private Gateway(final PolarConfiguration configuration, final OkHttpClient httpClient, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
     this.configuration = configuration;
     this.httpClient = httpClient;
     this.scheduler = scheduler;

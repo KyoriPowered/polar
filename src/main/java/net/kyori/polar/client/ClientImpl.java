@@ -51,7 +51,9 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
+@Singleton
 public final class ClientImpl implements Client {
   private static final Logger LOGGER = LoggerFactory.getLogger(ClientImpl.class);
   private final Long2ObjectMap<User> users = new Long2ObjectOpenHashMap<>();
