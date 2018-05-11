@@ -32,6 +32,7 @@ import com.google.inject.assistedinject.Assisted;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
+import net.kyori.kassel.channel.message.emoji.Emoji;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.GuildChannel;
 import net.kyori.kassel.guild.role.Role;
@@ -165,6 +166,31 @@ public final class MessageImpl extends SnowflakedImpl implements Message, Refres
   @Override
   public @NonNull Stream<Role> mentionedRoles() {
     return this.mentionedRoles.stream();
+  }
+
+  @Override
+  public @NonNull Reactions reactions() {
+    return new Reactions() {
+      @Override
+      public void add(final @NonNull Emoji emoji) {
+        MessageImpl.this.executor.submit(() -> MessageImpl.this.httpClient.json(Endpoints.addReaction(MessageImpl.this.channel.id(), MessageImpl.this.id, emoji).request(builder -> builder.put(RequestBody.create(null, new byte[0])))));
+      }
+
+      @Override
+      public void remove(final @NonNull Emoji emoji) {
+        MessageImpl.this.executor.submit(() -> MessageImpl.this.httpClient.json(Endpoints.deleteReaction(MessageImpl.this.channel.id(), MessageImpl.this.id, emoji).request(Request.Builder::delete)));
+      }
+
+      @Override
+      public void remove(final @NonNull User user, final @NonNull Emoji emoji) {
+        MessageImpl.this.executor.submit(() -> MessageImpl.this.httpClient.json(Endpoints.deleteReaction(MessageImpl.this.channel.id(), MessageImpl.this.id, user, emoji).request(Request.Builder::delete)));
+      }
+
+      @Override
+      public void removeAll() {
+        MessageImpl.this.executor.submit(() -> MessageImpl.this.httpClient.json(Endpoints.deleteReactions(MessageImpl.this.channel.id(), MessageImpl.this.id).request(Request.Builder::delete)));
+      }
+    };
   }
 
   @Override

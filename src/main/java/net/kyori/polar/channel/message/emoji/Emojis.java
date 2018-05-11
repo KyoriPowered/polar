@@ -24,12 +24,35 @@
 package net.kyori.polar.channel.message.emoji;
 
 import com.google.gson.JsonObject;
+import net.kyori.kassel.channel.message.emoji.CustomEmoji;
 import net.kyori.kassel.channel.message.emoji.Emoji;
+import net.kyori.kassel.channel.message.emoji.UnicodeEmoji;
 import net.kyori.peppermint.Json;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface Emojis {
   static @NonNull Emoji from(final @NonNull JsonObject json) {
     return Json.isNumber(json, "id") ? new CustomEmojiImpl(json) : new UnicodeEmojiImpl(json);
+  }
+
+  static @NonNull UnicodeEmoji unicode(final @NonNull JsonObject json) {
+    return new UnicodeEmojiImpl(json);
+  }
+
+  static @NonNull UnicodeEmoji unicode(final @NonNull String name) {
+    return new UnicodeEmojiImpl(name);
+  }
+
+  static @NonNull CustomEmoji custom(final @NonNull JsonObject json) {
+    return new CustomEmojiImpl(json);
+  }
+
+  static @NonNull String api(final @NonNull Emoji emoji) {
+    if(emoji instanceof UnicodeEmoji) {
+      return emoji.name();
+    } else if(emoji instanceof CustomEmoji) {
+      return emoji.name() + ":" + ((CustomEmoji) emoji).id();
+    }
+    throw new IllegalArgumentException(emoji.getClass().getName());
   }
 }

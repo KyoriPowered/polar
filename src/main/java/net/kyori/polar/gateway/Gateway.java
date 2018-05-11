@@ -62,6 +62,7 @@ import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.ChannelTypes;
 import net.kyori.polar.channel.message.MessageImpl;
 import net.kyori.polar.channel.message.emoji.Emojis;
+import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.guild.GuildImpl;
 import net.kyori.polar.guild.channel.GuildTextChannelImpl;
 import net.kyori.polar.refresh.Refreshable;
@@ -102,6 +103,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   private final OkHttpClient httpClient;
   private final ScheduledExecutorService scheduler;
   private final EventBus<Object, Object> bus;
+  private final ClientImpl client;
   private final Shard shard;
   private final GatewayUrl url;
 
@@ -121,11 +123,12 @@ public final class Gateway extends WebSocketListener implements Connectable {
   private long lastSequence = -1;
 
   @Inject
-  private Gateway(final PolarConfiguration configuration, final OkHttpClient httpClient, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
+  private Gateway(final PolarConfiguration configuration, final OkHttpClient httpClient, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final ClientImpl client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
     this.configuration = configuration;
     this.httpClient = httpClient;
     this.scheduler = scheduler;
     this.bus = bus;
+    this.client = client;
     this.shard = shard;
     this.url = url;
     this.guildFactory = guildFactory;
@@ -532,6 +535,8 @@ public final class Gateway extends WebSocketListener implements Connectable {
         .ifPresent(channel -> {
           final Snowflaked message = Optionals.cast(channel.message(Json.needLong(json, "message_id")), Snowflaked.class)
             .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
+          final Snowflaked user = Optionals.cast(this.client.user(Json.needLong(json, "user_id")), Snowflaked.class)
+            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
           final Emoji emoji = Emojis.from(json.getAsJsonObject("emoji"));
           this.bus.post(new ChannelMessageReactionAddEvent() {
             @Override
@@ -542,6 +547,11 @@ public final class Gateway extends WebSocketListener implements Connectable {
             @Override
             public @NonNull Snowflaked message() {
               return message;
+            }
+
+            @Override
+            public @NonNull Snowflaked user() {
+              return user;
             }
 
             @Override
@@ -562,6 +572,8 @@ public final class Gateway extends WebSocketListener implements Connectable {
         .ifPresent(channel -> {
           final Snowflaked message = Optionals.cast(channel.message(Json.needLong(json, "message_id")), Snowflaked.class)
             .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
+          final Snowflaked user = Optionals.cast(this.client.user(Json.needLong(json, "user_id")), Snowflaked.class)
+            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
           final Emoji emoji = Emojis.from(json.getAsJsonObject("emoji"));
           this.bus.post(new ChannelMessageReactionRemoveEvent() {
             @Override
@@ -572,6 +584,11 @@ public final class Gateway extends WebSocketListener implements Connectable {
             @Override
             public @NonNull Snowflaked message() {
               return message;
+            }
+
+            @Override
+            public @NonNull Snowflaked user() {
+              return user;
             }
 
             @Override

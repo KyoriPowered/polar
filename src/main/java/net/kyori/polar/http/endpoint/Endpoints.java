@@ -23,13 +23,19 @@
  */
 package net.kyori.polar.http.endpoint;
 
+import net.kyori.kassel.channel.message.emoji.Emoji;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.kassel.user.User;
 import net.kyori.polar.Polar;
+import net.kyori.polar.channel.message.emoji.Emojis;
 
 public final class Endpoints {
   private static final ParameterizedEndpoint SEND_MESSAGE = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages", "channel_id");
   private static final ParameterizedEndpoint DELETE_MESSAGE = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}", "channel_id");
   private static final ParameterizedEndpoint EDIT_MESSAGE = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}", "channel_id");
+  private static final ParameterizedEndpoint ADD_REACTION = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me", "channel_id", "message_id");
+  private static final ParameterizedEndpoint DELETE_REACTION = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/{who}", "channel_id", "message_id");
+  private static final ParameterizedEndpoint DELETE_REACTIONS = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions", "channel_id", "message_id");
   private static final SimpleEndpoint GATEWAY = new SimpleEndpoint(Polar.API_URL + "/gateway");
 
   private Endpoints() {
@@ -45,6 +51,22 @@ public final class Endpoints {
 
   public static Endpoint editMessage(final @Snowflake long channel_id, final @Snowflake long message_id) {
     return EDIT_MESSAGE.with(channel_id, message_id);
+  }
+
+  public static Endpoint addReaction(final @Snowflake long channel_id, final @Snowflake long message_id, final Emoji emoji) {
+    return ADD_REACTION.with(channel_id, message_id, Emojis.api(emoji));
+  }
+
+  public static Endpoint deleteReaction(final @Snowflake long channel_id, final @Snowflake long message_id, final Emoji emoji) {
+    return DELETE_REACTION.with(channel_id, message_id, Emojis.api(emoji), "@me");
+  }
+
+  public static Endpoint deleteReaction(final @Snowflake long channel_id, final @Snowflake long message_id, final User user, final Emoji emoji) {
+    return DELETE_REACTION.with(channel_id, message_id, Emojis.api(emoji), user.id());
+  }
+
+  public static Endpoint deleteReactions(final @Snowflake long channel_id, final @Snowflake long message_id) {
+    return DELETE_REACTIONS.with(channel_id, message_id);
   }
 
   public static Endpoint gateway() {

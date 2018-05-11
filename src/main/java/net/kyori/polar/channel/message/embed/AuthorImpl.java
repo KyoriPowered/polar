@@ -61,6 +61,7 @@ final class AuthorImpl implements Embed.Author {
     return Optional.ofNullable(this.url);
   }
 
+  @Field(name = "icon_url")
   @Override
   public @NonNull Optional<String> icon() {
     return Optional.ofNullable(this.icon);

@@ -41,16 +41,16 @@ import java.util.List;
 import java.util.Optional;
 
 public final class EmbedImpl implements Embed {
-  private final @Nullable String title;
-  private final @Nullable String description;
-  private final @Nullable String url;
-  private final @Nullable Color color;
-  private final @Nullable Instant timestamp;
-  private final @Nullable Author author;
-  private final @Nullable Image image;
-  private final @Nullable Thumbnail thumbnail;
-  private final List<Field> fields;
-  private final @Nullable Footer footer;
+  final @Nullable String title;
+  final @Nullable String description;
+  final @Nullable String url;
+  final @Nullable Color color;
+  final @Nullable Instant timestamp;
+  final @Nullable Author author;
+  final @Nullable Image image;
+  final @Nullable Thumbnail thumbnail;
+  final List<Field> fields;
+  final @Nullable Footer footer;
 
   public EmbedImpl(final @NonNull JsonObject json) {
     this.title = Json.getString(json, "title", null);
@@ -172,6 +172,11 @@ public final class EmbedImpl implements Embed {
   @Override
   public @NonNull Optional<Footer> footer() {
     return Optional.ofNullable(this.footer);
+  }
+
+  @Override
+  public @NonNull Builder toBuilder() {
+    return new BuilderImpl(this);
   }
 
   @Override

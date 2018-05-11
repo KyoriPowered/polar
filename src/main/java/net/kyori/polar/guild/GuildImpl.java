@@ -31,12 +31,14 @@ import com.google.inject.assistedinject.Assisted;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.kyori.kassel.channel.Channel;
+import net.kyori.kassel.channel.message.emoji.CustomEmoji;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.member.Member;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.channel.ChannelTypes;
+import net.kyori.polar.channel.message.emoji.Emojis;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -49,6 +51,7 @@ import javax.inject.Inject;
 
 public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshable {
   private final Long2ObjectMap<Channel> channels = new Long2ObjectOpenHashMap<>();
+  private final Long2ObjectMap<CustomEmoji> emojis = new Long2ObjectOpenHashMap<>();
   private final Long2ObjectMap<Member> members = new Long2ObjectOpenHashMap<>();
   private final Long2ObjectMap<Role> roles = new Long2ObjectOpenHashMap<>();
   private final GuildFactories factories;
@@ -68,6 +71,10 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
       this.readChannels(json.getAsJsonArray("channels"));
     }
 
+    if(Json.isArray(json, "emojis")) {
+      this.readEmojis(json.getAsJsonArray("emojis"));
+    }
+
     if(Json.isArray(json, "roles")) {
       this.readRoles(json.getAsJsonArray("roles"));
     }
@@ -85,6 +92,16 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
 
   private void readChannel(final JsonObject json) {
     this.putChannel(Json.needLong(json, "id"), json);
+  }
+
+  private void readEmojis(final JsonArray emojis) {
+    for(final JsonElement emoji : emojis) {
+      this.readEmoji(emoji.getAsJsonObject());
+    }
+  }
+
+  private void readEmoji(final JsonObject json) {
+    this.putEmoji(Json.needLong(json, "id"), json);
   }
 
   private void readRoles(final JsonArray roles) {
@@ -143,6 +160,20 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
 
   public @NonNull Optional<Channel> removeChannel(final @Snowflake long id) {
     return Optional.ofNullable(this.channels.remove(id));
+  }
+
+  @Override
+  public @NonNull Stream<CustomEmoji> emojis() {
+    return this.emojis.values().stream();
+  }
+
+  @Override
+  public @NonNull Optional<CustomEmoji> emoji(final @Snowflake long id) {
+    return Optional.ofNullable(this.emojis.get(id));
+  }
+
+  private void putEmoji(final @Snowflake long id, final JsonObject json) {
+    this.emojis.put(id, Emojis.custom(json));
   }
 
   @Override

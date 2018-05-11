@@ -38,7 +38,7 @@ public final class UnicodeEmojiImpl implements UnicodeEmoji {
     this(Json.needString(json, "name"));
   }
 
-  private UnicodeEmojiImpl(final @NonNull String name) {
+  UnicodeEmojiImpl(final @NonNull String name) {
     this.name = name;
   }
 

@@ -31,6 +31,7 @@ import java.awt.Color;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -55,6 +56,30 @@ final class BuilderImpl implements Embed.Builder {
   // footer
   @Nullable String footerText;
   @Nullable String footerIcon;
+
+  BuilderImpl() {
+  }
+
+  BuilderImpl(final EmbedImpl embed) {
+    this.title = embed.title;
+    this.description = embed.description;
+    this.url = embed.url;
+    this.color = embed.color;
+    this.timestamp = embed.timestamp;
+    this.authorName = embed.author != null ? embed.author.name().orElse(null) : null;
+    this.authorUrl = embed.author != null ? embed.author.url().orElse(null) : null;
+    this.authorIcon = embed.author != null ? embed.author.icon().orElse(null) : null;
+    this.imageUrl = embed.image != null ? embed.image.url().orElse(null) : null;
+    this.thumbnailUrl = embed.thumbnail != null ? embed.thumbnail.url().orElse(null) : null;
+    this.fields.addAll(embed.fields.stream()
+      .map(field -> new FieldImpl(
+        field.name(),
+        field.value(),
+        field.inline()
+      )).collect(Collectors.toList()));
+    this.footerText = embed.footer != null ? embed.footer.text().orElse(null) : null;
+    this.footerIcon = embed.footer != null ? embed.footer.icon().orElse(null) : null;
+  }
 
   @Override
   public Embed.@NonNull Builder title(final @Nullable String title) {

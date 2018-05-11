@@ -53,6 +53,7 @@ final class FooterImpl implements Embed.Footer {
     return Optional.ofNullable(this.text);
   }
 
+  @Field(name = "icon_url")
   @Override
   public @NonNull Optional<String> icon() {
     return Optional.ofNullable(this.icon);
