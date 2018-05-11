@@ -157,7 +157,14 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   @Override
+  public void onClosing(final WebSocket ws, final int code, final String reason) {
+    LOGGER.error("Closing shard {} gateway: {} {}", this.shard.id(), code, reason);
+  }
+
+  @Override
   public void onClosed(final WebSocket ws, final int code, final String reason) {
+    LOGGER.error("Closed shard {} gateway: {} {}", this.shard.id(), code, reason);
+
     this.inflater = null;
     this.ws = null;
 
