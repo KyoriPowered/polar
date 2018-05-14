@@ -31,7 +31,7 @@ import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public final class CustomEmojiImpl extends SnowflakedImpl implements CustomEmoji {
-  private final String name;
+  private @NonNull String name;
   private final boolean animated;
 
   CustomEmojiImpl(final @NonNull JsonObject json) {
@@ -51,6 +51,10 @@ public final class CustomEmojiImpl extends SnowflakedImpl implements CustomEmoji
   @Override
   public @NonNull String name() {
     return this.name;
+  }
+
+  public void name(final @NonNull String name) {
+    this.name = name;
   }
 
   @Override

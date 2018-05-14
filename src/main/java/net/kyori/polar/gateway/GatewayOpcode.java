@@ -30,6 +30,7 @@ interface GatewayOpcode {
   int STATUS_UPDATE = 3;
   int RESUME = 6;
   int RECONNECT = 7;
+  int REQUEST_GUILD_MEMBERS = 8;
   int INVALID_SESSION = 9;
   int HELLO = 10;
   int HEARTBEAT_ACK = 11;

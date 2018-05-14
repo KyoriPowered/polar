@@ -30,6 +30,8 @@ import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArraySet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.channel.message.emoji.CustomEmoji;
 import net.kyori.kassel.guild.Guild;
@@ -38,6 +40,7 @@ import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.channel.ChannelTypes;
+import net.kyori.polar.channel.message.emoji.CustomEmojiImpl;
 import net.kyori.polar.channel.message.emoji.Emojis;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
@@ -45,13 +48,14 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Optional;
+import java.util.function.LongConsumer;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
 public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshable {
   private final Long2ObjectMap<Channel> channels = new Long2ObjectOpenHashMap<>();
-  private final Long2ObjectMap<CustomEmoji> emojis = new Long2ObjectOpenHashMap<>();
+  final Long2ObjectMap<CustomEmoji> emojis = new Long2ObjectOpenHashMap<>();
   private final Long2ObjectMap<Member> members = new Long2ObjectOpenHashMap<>();
   private final Long2ObjectMap<Role> roles = new Long2ObjectOpenHashMap<>();
   private final GuildFactories factories;
@@ -176,9 +180,23 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
     this.emojis.put(id, Emojis.custom(json));
   }
 
+  public void refreshEmojis(final JsonArray emojis) {
+    final EmojiRefresher refresher = new EmojiRefresher();
+
+    for(final JsonElement emoji : emojis) {
+      refresher.refresh(emoji.getAsJsonObject());
+    }
+
+    refresher.removeDead();
+  }
+
   @Override
   public @NonNull Optional<Member> member(final @Snowflake long id) {
     return Optional.ofNullable(this.members.get(id));
+  }
+
+  public boolean requiresMemberChunking(final int expected) {
+    return expected > this.members.size();
   }
 
   @Override
@@ -219,5 +237,36 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
 
   public interface Factory {
     GuildImpl create(final @NonNull JsonObject json);
+  }
+
+  private final class EmojiRefresher {
+    final Long2ObjectMap<CustomEmoji> emojis = GuildImpl.this.emojis;
+    final LongSet encountered = new LongArraySet();
+
+    void refresh(final JsonObject json) {
+      final CustomEmojiImpl emoji = this.emoji(json);
+      emoji.name(Json.needString(json, "name"));
+    }
+
+    private CustomEmojiImpl emoji(final JsonObject json) {
+      final @Snowflake long id = Json.needLong(json, "id");
+      this.encountered.add(id);
+      @Nullable CustomEmoji emoji = this.emojis.get(id);
+      if(emoji == null) {
+        emoji = Emojis.custom(json);
+        this.emojis.put(id, emoji);
+      }
+      return (CustomEmojiImpl) emoji;
+    }
+
+    void removeDead() {
+      final LongSet removed = new LongArraySet();
+      this.emojis.keySet().forEach((LongConsumer) id -> {
+        if(!this.encountered.contains(id)) {
+          removed.add(id);
+        }
+      });
+      removed.forEach((LongConsumer) this.emojis::remove);
+    }
   }
 }

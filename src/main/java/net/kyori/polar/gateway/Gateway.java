@@ -237,7 +237,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   private void onMessage(final WebSocket ws, final JsonObject json) {
     final int opcode = Json.needInt(json, GatewayPayload.OPCODE);
     switch(opcode) {
-      case GatewayOpcode.DISPATCH: this.dispatch(json); break;
+      case GatewayOpcode.DISPATCH: this.dispatch(ws, json); break;
       case GatewayOpcode.HEARTBEAT: this.heartbeat(ws); break;
       case GatewayOpcode.RECONNECT: this.reconnect(ws); break;
       case GatewayOpcode.INVALID_SESSION: this.invalidSession(ws); break;
@@ -251,7 +251,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
    * DISPATCH
    */
 
-  private void dispatch(final JsonObject json) {
+  private void dispatch(final WebSocket ws, final JsonObject json) {
     this.lastSequence = Json.needInt(json, GatewayPayload.SEQUENCE);
 
     final String eventName = Json.needString(json, GatewayPayload.EVENT_NAME);
@@ -264,13 +264,13 @@ public final class Gateway extends WebSocketListener implements Connectable {
       case GatewayEvent.CHANNEL_UPDATE: this.dispatchChannelUpdate(eventData); break;
       case GatewayEvent.GUILD_BAN_ADD: /* don't care */ break;
       case GatewayEvent.GUILD_BAN_REMOVE: /* don't care */ break;
-      case GatewayEvent.GUILD_CREATE: this.dispatchGuildCreate(eventData); break;
+      case GatewayEvent.GUILD_CREATE: this.dispatchGuildCreate(ws, eventData); break;
       case GatewayEvent.GUILD_DELETE: this.dispatchGuildDelete(eventData); break;
-      case GatewayEvent.GUILD_EMOJIS_UPDATE: /* don't care */ break;
+      case GatewayEvent.GUILD_EMOJIS_UPDATE: this.dispatchGuildEmojisUpdate(eventData); break;
       case GatewayEvent.GUILD_MEMBER_ADD: this.dispatchGuildMemberAdd(eventData); break;
       case GatewayEvent.GUILD_MEMBER_REMOVE: this.dispatchGuildMemberRemove(eventData); break;
       case GatewayEvent.GUILD_MEMBER_UPDATE: this.dispatchGuildMemberUpdate(eventData); break;
-      case GatewayEvent.GUILD_MEMBERS_CHUNK: /* don't care */ break;
+      case GatewayEvent.GUILD_MEMBERS_CHUNK: this.dispatchGuildMembersChunk(eventData); break;
       case GatewayEvent.GUILD_ROLE_CREATE: this.dispatchGuildRoleCreate(eventData); break;
       case GatewayEvent.GUILD_ROLE_DELETE: this.dispatchGuildRoleDelete(eventData); break;
       case GatewayEvent.GUILD_ROLE_UPDATE: this.dispatchGuildRoleUpdate(eventData); break;
@@ -355,12 +355,12 @@ public final class Gateway extends WebSocketListener implements Connectable {
     }
   }
 
-  private void dispatchGuildCreate(final JsonObject json) {
+  private void dispatchGuildCreate(final WebSocket ws, final JsonObject json) {
     if(Json.getBoolean(json, "unavailable", false)) {
       return;
     }
 
-    final Guild guild = this.guildFactory.create(json);
+    final GuildImpl guild = this.guildFactory.create(json);
     this.shard.putGuild(Json.needLong(json, "id"), guild);
     this.bus.post(new GuildCreateEvent() {
       @Override
@@ -368,6 +368,16 @@ public final class Gateway extends WebSocketListener implements Connectable {
         return guild;
       }
     });
+
+    final int expectedMembers = Json.getInt(json, "member_count", -1);
+    if(guild.requiresMemberChunking(expectedMembers)) {
+      LOGGER.info("Requesting member chunks for guild {}...", guild.id());
+      ws.send(GatewayPayload.create(GatewayOpcode.REQUEST_GUILD_MEMBERS, d -> {
+        d.addProperty("guild_id", guild.id());
+        d.addProperty("query", ""); // empty = all
+        d.addProperty("limit", 0); // 0 = all
+      }));
+    }
   }
 
   private void dispatchGuildDelete(final JsonObject json) {
@@ -377,6 +387,11 @@ public final class Gateway extends WebSocketListener implements Connectable {
         return guild;
       }
     }));
+  }
+
+  private void dispatchGuildEmojisUpdate(final JsonObject json) {
+    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
+      .ifPresent(guild -> guild.refreshEmojis(json.getAsJsonArray("emojis")));
   }
 
   private void dispatchGuildMemberAdd(final JsonObject json) {
@@ -419,6 +434,15 @@ public final class Gateway extends WebSocketListener implements Connectable {
     this.shard.guild(Json.needLong(json, "guild_id"))
       .ifPresent(guild -> Optionals.cast(guild.member(Json.needLong(json.getAsJsonObject("user"), "id")), Refreshable.class)
         .ifPresent(member -> member.refresh(json)));
+  }
+
+  private void dispatchGuildMembersChunk(final JsonObject json) {
+    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
+      .ifPresent(guild -> {
+        for(final JsonElement member : json.getAsJsonArray("members")) {
+          guild.putMember(member.getAsJsonObject());
+        }
+      });
   }
 
   private void dispatchGuildRoleCreate(final JsonObject json) {
