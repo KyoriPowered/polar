@@ -35,6 +35,7 @@ import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.GuildTextChannel;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.peppermint.Json;
+import net.kyori.polar.ForPolar;
 import net.kyori.polar.channel.message.MessageImpl;
 import net.kyori.polar.http.HttpClient;
 import net.kyori.polar.http.RateLimitedHttpClient;
@@ -67,7 +68,7 @@ public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildT
   private @Nullable String topic;
 
   @Inject
-  private GuildTextChannelImpl(final GuildTextChannelRefresher refresher, final ExecutorService executor, final RateLimitedHttpClient httpClient, final Gson gson, final MessageImpl.Factory messageFactory, final @Assisted Guild guild, final @Assisted JsonObject json) {
+  private GuildTextChannelImpl(final GuildTextChannelRefresher refresher, final ExecutorService executor, final RateLimitedHttpClient httpClient, final @ForPolar Gson gson, final MessageImpl.Factory messageFactory, final @Assisted Guild guild, final @Assisted JsonObject json) {
     super(Json.needLong(json, "id"));
     this.refresher = refresher;
     this.executor = executor;

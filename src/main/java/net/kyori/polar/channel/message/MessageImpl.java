@@ -38,6 +38,7 @@ import net.kyori.kassel.guild.channel.GuildChannel;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.user.User;
 import net.kyori.peppermint.Json;
+import net.kyori.polar.ForPolar;
 import net.kyori.polar.channel.message.embed.EmbedImpl;
 import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.http.HttpClient;
@@ -73,7 +74,7 @@ public final class MessageImpl extends SnowflakedImpl implements Message, Refres
   private final Set<Role> mentionedRoles;
 
   @Inject
-  private MessageImpl(final MessageRefresher refresher, final ExecutorService executor, final RateLimitedHttpClient httpClient, final Gson gson, final ClientImpl client, final @Assisted Channel channel, final @Assisted JsonObject json) {
+  private MessageImpl(final MessageRefresher refresher, final ExecutorService executor, final RateLimitedHttpClient httpClient, final @ForPolar Gson gson, final ClientImpl client, final @Assisted Channel channel, final @Assisted JsonObject json) {
     super(Json.needLong(json, "id"));
     this.refresher = refresher;
     this.executor = executor;
