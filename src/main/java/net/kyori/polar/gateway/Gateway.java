@@ -159,29 +159,39 @@ public final class Gateway extends WebSocketListener implements Connectable {
   @Override
   public void onClosing(final WebSocket ws, final int code, final String reason) {
     LOGGER.error("Closing shard {} gateway: {} {}", this.shard.id(), code, reason);
-    this.closed(ws, code, reason);
+    if(!this.canReconnect(code)) {
+      ws.close(1000, null);
+    } else {
+      ws.close(4000, "reconnect");
+    }
   }
 
   @Override
   public void onClosed(final WebSocket ws, final int code, final String reason) {
     LOGGER.error("Closed shard {} gateway: {} {}", this.shard.id(), code, reason);
-    this.closed(ws, code, reason);
-  }
 
-  private void closed(final WebSocket ws, final int code, final String reason) {
     if(this.state == State.RESUMING) {
       return;
     }
 
-    this.inflater = null;
-    this.ws = null;
+    this.resetState();
 
     this.resetHeartbeat();
 
-    if(this.state == State.DISCONNECTING) {
+    if(!this.canReconnect(code)) {
       this.state = State.DISCONNECTED;
       LOGGER.info("Disconnected shard {} from gateway", this.shard.id());
       return;
+    }
+
+    this.state = State.RESUMING;
+    LOGGER.info("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
+    this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
+  }
+
+  private boolean canReconnect(final int code) {
+    if(this.state == State.DISCONNECTING) {
+      return false;
     }
 
     switch(code) {
@@ -189,12 +199,15 @@ public final class Gateway extends WebSocketListener implements Connectable {
       case GatewayCloseCode.AUTHENTICATION_FAILED:
       case GatewayCloseCode.ALREADY_AUTHENTICATED:
       case GatewayCloseCode.INVALID_SHARD:
-        return;
+        return false;
     }
 
-    this.state = State.RESUMING;
-    LOGGER.info("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
-    this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
+    return true;
+  }
+
+  private void resetState() {
+    this.inflater = null;
+    this.ws = null;
   }
 
   public void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName) {
