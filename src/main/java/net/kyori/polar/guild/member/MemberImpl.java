@@ -64,7 +64,6 @@ public final class MemberImpl implements Member, Refreshable {
 
   @Override
   public void refresh(final JsonElement json) {
-    System.out.println("Refreshing member...");
     this.refresher.refresh(new MemberRefresher.Context() {
       @Override
       public @NonNull Guild guild() {

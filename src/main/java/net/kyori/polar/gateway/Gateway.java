@@ -137,14 +137,14 @@ public final class Gateway extends WebSocketListener implements Connectable {
 
   @Override
   public void connect() {
-    LOGGER.debug("Connecting shard {} gateway...", this.shard.id());
+    LOGGER.info("Connecting shard {} to gateway...", this.shard.id());
     this.state = State.CONNECTING;
     this.ws = this.httpClient.newWebSocket(new Request.Builder().url(this.url.get()).build(), this);
   }
 
   @Override
   public void disconnect() {
-    LOGGER.debug("Disconnecting shard {} gateway...", this.shard.id());
+    LOGGER.info("Disconnecting shard {} from gateway...", this.shard.id());
     this.state = State.DISCONNECTING;
     this.ws.close(1000, null);
     this.ws = null;
@@ -180,7 +180,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
 
     if(this.state == State.DISCONNECTING) {
       this.state = State.DISCONNECTED;
-      LOGGER.debug("Disconnected shard {} from gateway", this.shard.id());
+      LOGGER.info("Disconnected shard {} from gateway", this.shard.id());
       return;
     }
 
@@ -193,7 +193,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
     }
 
     this.state = State.RESUMING;
-    LOGGER.debug("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
+    LOGGER.info("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
     this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
   }
 
