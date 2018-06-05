@@ -154,6 +154,10 @@ public final class Gateway extends WebSocketListener implements Connectable {
   public void onOpen(final WebSocket ws, final Response response) {
     this.state = State.CONNECTED;
     this.inflater = new Inflater();
+
+    if(this.sessionId != null) {
+      this.resume(ws);
+    }
   }
 
   @Override
@@ -187,6 +191,11 @@ public final class Gateway extends WebSocketListener implements Connectable {
     this.state = State.RESUMING;
     LOGGER.info("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
     this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
+  }
+
+  @Override
+  public void onFailure(final WebSocket ws, final Throwable t, final @Nullable Response response) {
+    LOGGER.error("Encountered a failure in shard {} gateway with response: {}", this.shard.id(), response, t);
   }
 
   private boolean canReconnect(final int code) {
@@ -243,7 +252,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
     try {
       this.onMessage(ws, json);
     } catch(final Throwable t) {
-      LOGGER.error("Encountered an exception while processing message", t);
+      LOGGER.error("Encountered an exception while processing message {}", json, t);
     }
   }
 
@@ -297,7 +306,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
       case GatewayEvent.MESSAGE_UPDATE: this.dispatchMessageUpdate(eventData); break;
       case GatewayEvent.PRESENCE_UPDATE: /* don't care */ break;
       case GatewayEvent.READY: this.dispatchReady(eventData); break;
-      case GatewayEvent.RESUMED: /* don't care */ break;
+      case GatewayEvent.RESUMED: this.dispatchResumed(); break;
       case GatewayEvent.TYPING_START: /* don't care */ break;
       case GatewayEvent.USER_UPDATE: /* don't care */ break;
       case GatewayEvent.VOICE_STATE_UPDATE: /* don't care */ break;
@@ -693,6 +702,10 @@ public final class Gateway extends WebSocketListener implements Connectable {
     this.sessionId = Json.needString(json, "session_id");
   }
 
+  private void dispatchResumed() {
+    LOGGER.info("Shard {} resumed", this.shard.id());
+  }
+
   /*
    * HEARTBEAT
    */
@@ -722,7 +735,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
 
   private void reconnect(final WebSocket ws) {
     this.resetHeartbeat();
-    this.resume(ws);
+    ws.close(4000, "reconnect");
   }
 
   /*
@@ -756,8 +769,6 @@ public final class Gateway extends WebSocketListener implements Connectable {
 
     if(this.sessionId == null) {
       this.identify(ws);
-    } else {
-      this.resume(ws);
     }
   }
 
