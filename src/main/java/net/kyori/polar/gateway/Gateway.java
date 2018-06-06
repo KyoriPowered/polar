@@ -30,6 +30,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.inject.assistedinject.Assisted;
+import com.neovisionaries.ws.client.WebSocket;
+import com.neovisionaries.ws.client.WebSocketAdapter;
+import com.neovisionaries.ws.client.WebSocketException;
+import com.neovisionaries.ws.client.WebSocketFactory;
+import com.neovisionaries.ws.client.WebSocketFrame;
 import net.kyori.event.EventBus;
 import net.kyori.kassel.Connectable;
 import net.kyori.kassel.channel.Channel;
@@ -69,12 +74,6 @@ import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.shard.Shard;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import net.kyori.polar.user.Activities;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
-import okio.ByteString;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -83,7 +82,10 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -93,14 +95,14 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
 import javax.inject.Inject;
+import javax.net.ssl.SSLContext;
 
-public final class Gateway extends WebSocketListener implements Connectable {
+public final class Gateway extends WebSocketAdapter implements Connectable {
   private static final Logger LOGGER = LoggerFactory.getLogger(Gateway.class);
   private static final JsonParser PARSER = new JsonParser();
   private static final int RECONNECT_SECONDS = 5;
 
   private final PolarConfiguration configuration;
-  private final OkHttpClient httpClient;
   private final ScheduledExecutorService scheduler;
   private final EventBus<Object, Object> bus;
   private final Client client;
@@ -123,9 +125,8 @@ public final class Gateway extends WebSocketListener implements Connectable {
   private long lastSequence = -1;
 
   @Inject
-  private Gateway(final PolarConfiguration configuration, final OkHttpClient httpClient, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
+  private Gateway(final PolarConfiguration configuration, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
     this.configuration = configuration;
-    this.httpClient = httpClient;
     this.scheduler = scheduler;
     this.bus = bus;
     this.client = client;
@@ -139,19 +140,32 @@ public final class Gateway extends WebSocketListener implements Connectable {
   public void connect() {
     LOGGER.info("Connecting shard {} to gateway...", this.shard.id());
     this.state = State.CONNECTING;
-    this.ws = this.httpClient.newWebSocket(new Request.Builder().url(this.url.get()).build(), this);
+    final WebSocketFactory factory = new WebSocketFactory();
+    try {
+      factory.setSSLContext(SSLContext.getDefault());
+    } catch(final NoSuchAlgorithmException e) {
+      LOGGER.error("Encountered an exception while setting SSL context", e);
+    }
+    try {
+      this.ws = factory.createSocket(this.url.get())
+        .addHeader("Accept-Encoding", "gzip")
+        .addListener(this);
+      this.ws.connect();
+    } catch(final IOException | WebSocketException e) {
+      LOGGER.error("Encountered an exception while creating socket", e);
+    }
   }
 
   @Override
   public void disconnect() {
     LOGGER.info("Disconnecting shard {} from gateway...", this.shard.id());
     this.state = State.DISCONNECTING;
-    this.ws.close(1000, null);
+    this.ws.sendClose(1000);
     this.ws = null;
   }
 
   @Override
-  public void onOpen(final WebSocket ws, final Response response) {
+  public void onConnected(final WebSocket ws, final Map<String, List<String>> headers) {
     this.state = State.CONNECTED;
     this.inflater = new Inflater();
 
@@ -161,18 +175,22 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   @Override
-  public void onClosing(final WebSocket ws, final int code, final String reason) {
-    LOGGER.error("Closing shard {} gateway: {} {}", this.shard.id(), code, reason);
-    if(!this.canReconnect(code)) {
-      ws.close(1000, null);
-    } else {
-      ws.close(4000, "reconnect");
+  public void onDisconnected(final WebSocket ws, final WebSocketFrame serverCloseFrame, final WebSocketFrame clientCloseFrame, final boolean closedByServer) {
+    boolean reconnect = true;
+    if(closedByServer) {
+      if(serverCloseFrame != null) {
+        reconnect = this.canReconnect(serverCloseFrame.getCloseCode());
+        LOGGER.info("Shard {} disconnected from gateway by server ({}: {})", this.shard.id(), serverCloseFrame.getCloseCode(), serverCloseFrame.getCloseReason());
+      } else {
+        LOGGER.info("Shard {} disconnected from gateway by server", this.shard.id());
+      }
+    } else if(clientCloseFrame != null) {
+      switch(clientCloseFrame.getCloseCode()) {
+        case 1000:
+          LOGGER.info("Shard {} disconnected from gateway by client ({}: {})", this.shard.id(), clientCloseFrame.getCloseCode(), clientCloseFrame.getCloseReason());
+          break;
+      }
     }
-  }
-
-  @Override
-  public void onClosed(final WebSocket ws, final int code, final String reason) {
-    LOGGER.error("Closed shard {} gateway: {} {}", this.shard.id(), code, reason);
 
     if(this.state == State.RESUMING) {
       return;
@@ -182,20 +200,15 @@ public final class Gateway extends WebSocketListener implements Connectable {
 
     this.resetHeartbeat();
 
-    if(!this.canReconnect(code)) {
+    if(!reconnect) {
       this.state = State.DISCONNECTED;
-      LOGGER.info("Disconnected shard {} from gateway", this.shard.id());
+      LOGGER.info("Shard {} disconnected from gateway", this.shard.id());
       return;
     }
 
     this.state = State.RESUMING;
     LOGGER.info("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
     this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
-  }
-
-  @Override
-  public void onFailure(final WebSocket ws, final Throwable t, final @Nullable Response response) {
-    LOGGER.error("Encountered a failure in shard {} gateway with response: {}", this.shard.id(), response, t);
   }
 
   private boolean canReconnect(final int code) {
@@ -220,7 +233,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   public void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName) {
-    this.ws.send(GatewayPayload.create(GatewayOpcode.STATUS_UPDATE, (d) -> {
+    this.ws.sendText(GatewayPayload.create(GatewayOpcode.STATUS_UPDATE, (d) -> {
       d.addProperty("afk", false);
       d.add("since", JsonNull.INSTANCE);
       d.addProperty("status", status.name().toLowerCase(Locale.ENGLISH));
@@ -237,17 +250,17 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   @Override
-  public void onMessage(final WebSocket ws, final ByteString bytes) {
-    try(final ByteArrayOutputStream baos = new ByteArrayOutputStream(bytes.size()); final InflaterOutputStream ios = new InflaterOutputStream(baos, this.inflater)) {
-      ios.write(bytes.toByteArray());
-      this.onMessage(ws, new String(baos.toByteArray(), StandardCharsets.UTF_8));
+  public void onBinaryMessage(final WebSocket ws, final byte[] bytes) {
+    try(final ByteArrayOutputStream baos = new ByteArrayOutputStream(bytes.length); final InflaterOutputStream ios = new InflaterOutputStream(baos, this.inflater)) {
+      ios.write(bytes);
+      this.onTextMessage(ws, new String(baos.toByteArray(), StandardCharsets.UTF_8));
     } catch(final IOException e) {
       LOGGER.error("Encountered an exception while decompressing", e);
     }
   }
 
   @Override
-  public void onMessage(final WebSocket ws, final String text) {
+  public void onTextMessage(final WebSocket ws, final String text) {
     final JsonObject json = PARSER.parse(text).getAsJsonObject();
     try {
       this.onMessage(ws, json);
@@ -277,35 +290,35 @@ public final class Gateway extends WebSocketListener implements Connectable {
     this.lastSequence = Json.needInt(json, GatewayPayload.SEQUENCE);
 
     final String eventName = Json.needString(json, GatewayPayload.EVENT_NAME);
-    final JsonObject eventData = json.getAsJsonObject(GatewayPayload.EVENT_DATA);
+    final JsonElement eventData = json.get(GatewayPayload.EVENT_DATA);
 
     switch(eventName) {
-      case GatewayEvent.CHANNEL_CREATE: this.dispatchChannelCreate(eventData); break;
-      case GatewayEvent.CHANNEL_DELETE: this.dispatchChannelDelete(eventData); break;
+      case GatewayEvent.CHANNEL_CREATE: this.dispatchChannelCreate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.CHANNEL_DELETE: this.dispatchChannelDelete(eventData.getAsJsonObject()); break;
       case GatewayEvent.CHANNEL_PINS_UPDATE: /* don't care */ break;
-      case GatewayEvent.CHANNEL_UPDATE: this.dispatchChannelUpdate(eventData); break;
+      case GatewayEvent.CHANNEL_UPDATE: this.dispatchChannelUpdate(eventData.getAsJsonObject()); break;
       case GatewayEvent.GUILD_BAN_ADD: /* don't care */ break;
       case GatewayEvent.GUILD_BAN_REMOVE: /* don't care */ break;
-      case GatewayEvent.GUILD_CREATE: this.dispatchGuildCreate(ws, eventData); break;
-      case GatewayEvent.GUILD_DELETE: this.dispatchGuildDelete(eventData); break;
-      case GatewayEvent.GUILD_EMOJIS_UPDATE: this.dispatchGuildEmojisUpdate(eventData); break;
-      case GatewayEvent.GUILD_MEMBER_ADD: this.dispatchGuildMemberAdd(eventData); break;
-      case GatewayEvent.GUILD_MEMBER_REMOVE: this.dispatchGuildMemberRemove(eventData); break;
-      case GatewayEvent.GUILD_MEMBER_UPDATE: this.dispatchGuildMemberUpdate(eventData); break;
-      case GatewayEvent.GUILD_MEMBERS_CHUNK: this.dispatchGuildMembersChunk(eventData); break;
-      case GatewayEvent.GUILD_ROLE_CREATE: this.dispatchGuildRoleCreate(eventData); break;
-      case GatewayEvent.GUILD_ROLE_DELETE: this.dispatchGuildRoleDelete(eventData); break;
-      case GatewayEvent.GUILD_ROLE_UPDATE: this.dispatchGuildRoleUpdate(eventData); break;
-      case GatewayEvent.GUILD_UPDATE: this.dispatchGuildUpdate(eventData); break;
-      case GatewayEvent.MESSAGE_CREATE: this.dispatchMessageCreate(eventData); break;
-      case GatewayEvent.MESSAGE_DELETE: this.dispatchMessageDelete(eventData); break;
-      case GatewayEvent.MESSAGE_DELETE_BULK: this.dispatchMessageDeleteBulk(eventData); break;
-      case GatewayEvent.MESSAGE_REACTION_ADD: this.dispatchMessageReactionAdd(eventData); break;
-      case GatewayEvent.MESSAGE_REACTION_REMOVE: this.dispatchMessageReactionRemove(eventData); break;
-      case GatewayEvent.MESSAGE_REACTION_REMOVE_ALL: this.dispatchMessageReactionRemoveAll(eventData); break;
-      case GatewayEvent.MESSAGE_UPDATE: this.dispatchMessageUpdate(eventData); break;
+      case GatewayEvent.GUILD_CREATE: this.dispatchGuildCreate(ws, eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_DELETE: this.dispatchGuildDelete(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_EMOJIS_UPDATE: this.dispatchGuildEmojisUpdate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_MEMBER_ADD: this.dispatchGuildMemberAdd(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_MEMBER_REMOVE: this.dispatchGuildMemberRemove(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_MEMBER_UPDATE: this.dispatchGuildMemberUpdate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_MEMBERS_CHUNK: this.dispatchGuildMembersChunk(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_ROLE_CREATE: this.dispatchGuildRoleCreate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_ROLE_DELETE: this.dispatchGuildRoleDelete(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_ROLE_UPDATE: this.dispatchGuildRoleUpdate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.GUILD_UPDATE: this.dispatchGuildUpdate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_CREATE: this.dispatchMessageCreate(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_DELETE: this.dispatchMessageDelete(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_DELETE_BULK: this.dispatchMessageDeleteBulk(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_REACTION_ADD: this.dispatchMessageReactionAdd(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_REACTION_REMOVE: this.dispatchMessageReactionRemove(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_REACTION_REMOVE_ALL: this.dispatchMessageReactionRemoveAll(eventData.getAsJsonObject()); break;
+      case GatewayEvent.MESSAGE_UPDATE: this.dispatchMessageUpdate(eventData.getAsJsonObject()); break;
       case GatewayEvent.PRESENCE_UPDATE: /* don't care */ break;
-      case GatewayEvent.READY: this.dispatchReady(eventData); break;
+      case GatewayEvent.READY: this.dispatchReady(eventData.getAsJsonObject()); break;
       case GatewayEvent.RESUMED: this.dispatchResumed(); break;
       case GatewayEvent.TYPING_START: /* don't care */ break;
       case GatewayEvent.USER_UPDATE: /* don't care */ break;
@@ -394,7 +407,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
     final int expectedMembers = Json.getInt(json, "member_count", -1);
     if(guild.requiresMemberChunking(expectedMembers)) {
       LOGGER.info("Requesting member chunks for guild {}...", guild.id());
-      ws.send(GatewayPayload.create(GatewayOpcode.REQUEST_GUILD_MEMBERS, d -> {
+      ws.sendText(GatewayPayload.create(GatewayOpcode.REQUEST_GUILD_MEMBERS, d -> {
         d.addProperty("guild_id", guild.id());
         d.addProperty("query", ""); // empty = all
         d.addProperty("limit", 0); // 0 = all
@@ -703,6 +716,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   private void dispatchResumed() {
+    this.state = State.RESUMED;
     LOGGER.info("Shard {} resumed", this.shard.id());
   }
 
@@ -711,7 +725,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
    */
 
   private void heartbeat(final WebSocket ws) {
-    ws.send(GatewayPayload.create(GatewayOpcode.HEARTBEAT, () -> {
+    ws.sendText(GatewayPayload.create(GatewayOpcode.HEARTBEAT, () -> {
       if(this.lastSequence != -1) {
         return new JsonPrimitive(this.lastSequence);
       }
@@ -735,7 +749,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
 
   private void reconnect(final WebSocket ws) {
     this.resetHeartbeat();
-    ws.close(4000, "reconnect");
+    ws.sendClose(4000, "reconnect");
   }
 
   /*
@@ -773,7 +787,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   private void identify(final WebSocket ws) {
-    ws.send(GatewayPayload.create(GatewayOpcode.IDENTIFY, d -> {
+    ws.sendText(GatewayPayload.create(GatewayOpcode.IDENTIFY, d -> {
       d.addProperty("compress", true);
 
       final JsonObject properties = new JsonObject();
@@ -795,7 +809,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
   }
 
   private void resume(final WebSocket ws) {
-    ws.send(GatewayPayload.create(GatewayOpcode.RESUME, d -> {
+    ws.sendText(GatewayPayload.create(GatewayOpcode.RESUME, d -> {
       d.addProperty("seq", this.lastSequence);
       d.addProperty("session_id", this.sessionId);
       d.addProperty("token", this.configuration.token());
@@ -818,6 +832,7 @@ public final class Gateway extends WebSocketListener implements Connectable {
     CONNECTING,
     CONNECTED,
     RESUMING,
+    RESUMED,
     DISCONNECTING,
     DISCONNECTED;
   }

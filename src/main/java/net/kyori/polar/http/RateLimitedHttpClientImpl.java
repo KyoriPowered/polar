@@ -88,9 +88,10 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
   }
 
   private void calculateOffset(final Response response) {
+    final long now = System.currentTimeMillis();
     final @Nullable String date = response.header("Date");
     if(date != null) {
-      this.offset = OffsetDateTime.parse(date, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() - System.currentTimeMillis();
+      this.offset = OffsetDateTime.parse(date, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() - now;
     }
   }
 
@@ -104,12 +105,13 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
       this.queue.add(new Entry(request, future));
     }
 
-    int delay() {
+    long delay() {
       if(this.rateLimitRemaining > 0) {
         return 0;
       }
-      final long diff = System.currentTimeMillis() + (RateLimitedHttpClientImpl.this.offset == OFFSET_NOT_SET ? 0 : RateLimitedHttpClientImpl.this.offset);
-      return (int) (this.rateLimitReset - diff);
+      final long offset = RateLimitedHttpClientImpl.this.offset == OFFSET_NOT_SET ? 0 : RateLimitedHttpClientImpl.this.offset;
+      final long diff = System.currentTimeMillis() + offset;
+      return this.rateLimitReset - diff;
     }
 
     private boolean available() {
@@ -120,7 +122,7 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
       while(!this.queue.isEmpty()) {
         if(!this.available()) {
           try {
-            final int delay = this.delay();
+            final long delay = this.delay();
             if(delay > 0) {
               Thread.sleep(delay);
             }
@@ -130,7 +132,9 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
         }
 
         final Entry entry = this.queue.peek();
-        this.processEntry(entry);
+        if(entry != null) {
+          this.processEntry(entry);
+        }
       }
       this.future = null;
     }
