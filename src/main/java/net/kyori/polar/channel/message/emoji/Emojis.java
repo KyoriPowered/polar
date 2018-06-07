@@ -32,7 +32,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface Emojis {
   static @NonNull Emoji from(final @NonNull JsonObject json) {
-    return Json.isNumber(json, "id") ? new CustomEmojiImpl(json) : new UnicodeEmojiImpl(json);
+    return Json.isPrimitive(json, "id") ? new CustomEmojiImpl(json) : new UnicodeEmojiImpl(json);
   }
 
   static @NonNull UnicodeEmoji unicode(final @NonNull JsonObject json) {
