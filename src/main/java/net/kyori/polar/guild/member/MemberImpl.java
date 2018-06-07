@@ -60,6 +60,12 @@ public final class MemberImpl implements Member, Refreshable {
     this.guild = guild;
     this.user = client.userOrCreate(json.getAsJsonObject("user"));
     this.nick = Json.getString(json, "nick", null);
+
+    if(Json.isArray(json, "roles")) {
+      for(final JsonElement role : json.getAsJsonArray("roles")) {
+        this.roles.add(Json.needLong(role, "id"));
+      }
+    }
   }
 
   @Override
