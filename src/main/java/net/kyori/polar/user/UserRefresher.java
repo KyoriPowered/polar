@@ -40,7 +40,7 @@ import javax.inject.Singleton;
 final class UserRefresher extends Refresher<UserImpl, RefreshContext<UserImpl>> {
   @Override
   protected void register() {
-    this.field(UserImpl::username, json -> Json.needString(json, "username"), UserImpl::username, (context, oldName, newName) -> (new UserNameChangeEvent() {
+    this.field(UserImpl::username, json -> Json.needString(json, "username"), UserImpl::username, (context, oldName, newName) -> new UserNameChangeEvent() {
       @Override
       public @NonNull User user() {
         return context.target();
@@ -55,8 +55,8 @@ final class UserRefresher extends Refresher<UserImpl, RefreshContext<UserImpl>> 
       public @NonNull String newName() {
         return newName;
       }
-    }));
-    this.field(UserImpl::discriminator, json -> Json.needString(json, "discriminator"), UserImpl::discriminator, (context, oldDiscriminator, newDiscriminator) -> (new UserDiscriminatorChangeEvent() {
+    });
+    this.field(UserImpl::discriminator, json -> Json.needString(json, "discriminator"), UserImpl::discriminator, (context, oldDiscriminator, newDiscriminator) -> new UserDiscriminatorChangeEvent() {
       @Override
       public @NonNull User user() {
         return context.target();
@@ -71,8 +71,8 @@ final class UserRefresher extends Refresher<UserImpl, RefreshContext<UserImpl>> 
       public @NonNull String newDiscriminator() {
         return newDiscriminator;
       }
-    }));
-    this.field(UserImpl::avatar, json -> Optional.ofNullable(Json.getString(json, "avatar", null)), UserImpl::avatar, (context, oldAvatar, newAvatar) -> (new UserAvatarChangeEvent() {
+    });
+    this.field(UserImpl::avatar, json -> Optional.ofNullable(Json.getString(json, "avatar", null)), UserImpl::avatar, (context, oldAvatar, newAvatar) -> new UserAvatarChangeEvent() {
       @Override
       public @NonNull User user() {
         return context.target();
@@ -87,6 +87,6 @@ final class UserRefresher extends Refresher<UserImpl, RefreshContext<UserImpl>> 
       public @NonNull Optional<String> newAvatar() {
         return newAvatar;
       }
-    }));
+    });
   }
 }

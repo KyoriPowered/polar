@@ -65,7 +65,6 @@ public final class MessageImpl extends SnowflakedImpl implements Message, Refres
   private final ExecutorService executor;
   private final RateLimitedHttpClient httpClient;
   private final Gson gson;
-  private final ClientImpl client;
   private final Channel channel;
   private @NonNull User author;
   private @NonNull String content;
@@ -80,7 +79,6 @@ public final class MessageImpl extends SnowflakedImpl implements Message, Refres
     this.executor = executor;
     this.httpClient = httpClient;
     this.gson = gson;
-    this.client = client;
     this.channel = channel;
     this.author = client.userOrCreate(json.getAsJsonObject("author"));
     this.content = Json.needString(json, "content");

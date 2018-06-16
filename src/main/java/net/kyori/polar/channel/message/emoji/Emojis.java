@@ -35,10 +35,6 @@ public interface Emojis {
     return Json.isPrimitive(json, "id") ? new CustomEmojiImpl(json) : new UnicodeEmojiImpl(json);
   }
 
-  static @NonNull UnicodeEmoji unicode(final @NonNull JsonObject json) {
-    return new UnicodeEmojiImpl(json);
-  }
-
   static @NonNull UnicodeEmoji unicode(final @NonNull String name) {
     return new UnicodeEmojiImpl(name);
   }

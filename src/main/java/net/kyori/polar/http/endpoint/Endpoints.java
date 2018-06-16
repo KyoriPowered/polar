@@ -30,15 +30,22 @@ import net.kyori.polar.Polar;
 import net.kyori.polar.channel.message.emoji.Emojis;
 
 public final class Endpoints {
+  private static final SimpleEndpoint GATEWAY = new SimpleEndpoint(Polar.API_URL + "/gateway");
+
   private static final ParameterizedEndpoint SEND_MESSAGE = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages", "channel_id");
   private static final ParameterizedEndpoint DELETE_MESSAGE = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}", "channel_id");
   private static final ParameterizedEndpoint EDIT_MESSAGE = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}", "channel_id");
   private static final ParameterizedEndpoint ADD_REACTION = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me", "channel_id", "message_id");
   private static final ParameterizedEndpoint DELETE_REACTION = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/{who}", "channel_id", "message_id");
   private static final ParameterizedEndpoint DELETE_REACTIONS = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions", "channel_id", "message_id");
-  private static final SimpleEndpoint GATEWAY = new SimpleEndpoint(Polar.API_URL + "/gateway");
+
+  private static final ParameterizedEndpoint EDIT_GUILD_ROLE = new ParameterizedEndpoint(Polar.API_URL + "/guilds/{guild_id}/roles/{role_id}");
 
   private Endpoints() {
+  }
+
+  public static Endpoint gateway() {
+    return GATEWAY;
   }
 
   public static Endpoint sendMessage(final @Snowflake long channel_id) {
@@ -69,7 +76,7 @@ public final class Endpoints {
     return DELETE_REACTIONS.with(channel_id, message_id);
   }
 
-  public static Endpoint gateway() {
-    return GATEWAY;
+  public static Endpoint editGuildRole(final @Snowflake long guild_id, final @Snowflake long role_id) {
+    return EDIT_GUILD_ROLE.with(guild_id, role_id);
   }
 }

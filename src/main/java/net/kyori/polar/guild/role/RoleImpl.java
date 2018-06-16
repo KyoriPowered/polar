@@ -24,24 +24,34 @@
 package net.kyori.polar.guild.role;
 
 import com.google.common.base.MoreObjects;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.peppermint.Json;
+import net.kyori.polar.ForPolar;
+import net.kyori.polar.http.HttpClient;
+import net.kyori.polar.http.RateLimitedHttpClient;
+import net.kyori.polar.http.endpoint.Endpoints;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import net.kyori.polar.util.Colors;
+import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.awt.Color;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 
 import javax.inject.Inject;
 
 public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role {
+  private final ExecutorService executor;
+  private final RateLimitedHttpClient httpClient;
+  private final Gson gson;
   private final RoleRefresher refresher;
   private final Guild guild;
   private @NonNull String name;
@@ -51,8 +61,11 @@ public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role 
   private boolean hoist;
 
   @Inject
-  private RoleImpl(final RoleRefresher refresher, final @Assisted Guild guild, final @Assisted JsonObject json) {
+  private RoleImpl(final ExecutorService executor, final RateLimitedHttpClient httpClient, final @ForPolar Gson gson, final RoleRefresher refresher, final @Assisted Guild guild, final @Assisted JsonObject json) {
     super(Json.needLong(json, "id"));
+    this.executor = executor;
+    this.httpClient = httpClient;
+    this.gson = gson;
     this.refresher = refresher;
     this.guild = guild;
     this.name = Json.needString(json, "name");
@@ -116,6 +129,14 @@ public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role 
   @Override
   public boolean hoist() {
     return this.hoist;
+  }
+
+  @Override
+  public void edit(Edit edit) {
+    this.executor.submit(() -> this.httpClient.json(Endpoints.editGuildRole(this.guild.id(), this.id).request(builder -> {
+      final JsonObject json = this.gson.toJsonTree(edit).getAsJsonObject();
+      builder.patch(RequestBody.create(HttpClient.JSON_MEDIA_TYPE, json.toString()));
+    })));
   }
 
   void hoist(final boolean hoist) {
