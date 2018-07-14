@@ -47,6 +47,8 @@ import net.kyori.kassel.channel.message.event.ChannelMessageReactionAddEvent;
 import net.kyori.kassel.channel.message.event.ChannelMessageReactionClearEvent;
 import net.kyori.kassel.channel.message.event.ChannelMessageReactionRemoveEvent;
 import net.kyori.kassel.client.Client;
+import net.kyori.kassel.client.shard.event.ShardConnectedEvent;
+import net.kyori.kassel.client.shard.event.ShardResumedEvent;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.event.GuildChannelCreateEvent;
 import net.kyori.kassel.guild.channel.event.GuildChannelDeleteEvent;
@@ -237,15 +239,12 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       d.addProperty("afk", false);
       d.add("since", JsonNull.INSTANCE);
       d.addProperty("status", status.name().toLowerCase(Locale.ENGLISH));
-      d.add("game", EvenMoreObjects.make(new JsonObject(), game -> {
-        if(activityType != null && activityName != null) {
+      if(activityType != null && activityName != null) {
+        d.add("game", EvenMoreObjects.make(new JsonObject(), game -> {
           game.addProperty("type", Activities.activity(activityType));
           game.addProperty("name", activityName);
-        } else {
-          game.add("type", JsonNull.INSTANCE);
-          game.add("name", JsonNull.INSTANCE);
-        }
-      }));
+        }));
+      }
     }));
   }
 
@@ -713,11 +712,13 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private void dispatchReady(final JsonObject json) {
     this.sessionId = Json.needString(json, "session_id");
+    this.bus.post((ShardConnectedEvent) () -> this.shard);
   }
 
   private void dispatchResumed() {
     this.state = State.RESUMED;
     LOGGER.info("Shard {} resumed", this.shard.id());
+    this.bus.post((ShardResumedEvent) () -> this.shard);
   }
 
   /*
