@@ -244,6 +244,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
           game.addProperty("type", Activities.activity(activityType));
           game.addProperty("name", activityName);
         }));
+      } else {
+        d.add("game", JsonNull.INSTANCE);
       }
     }));
   }
