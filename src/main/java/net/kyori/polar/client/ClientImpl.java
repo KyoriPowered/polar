@@ -24,22 +24,32 @@
 package net.kyori.polar.client;
 
 import com.google.common.collect.MoreCollectors;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.kyori.kassel.Connectable;
+import net.kyori.kassel.channel.Channel;
+import net.kyori.kassel.channel.PrivateChannel;
 import net.kyori.kassel.client.Client;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
 import net.kyori.kassel.user.User;
+import net.kyori.lunar.EvenMoreObjects;
 import net.kyori.lunar.exception.Exceptions;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
+import net.kyori.polar.channel.Channels;
+import net.kyori.polar.channel.PrivateChannelImpl;
+import net.kyori.polar.http.HttpClient;
+import net.kyori.polar.http.RateLimitedHttpClient;
+import net.kyori.polar.http.endpoint.Endpoints;
 import net.kyori.polar.shard.Shard;
 import net.kyori.polar.shard.ShardImpl;
 import net.kyori.polar.user.UserImpl;
+import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -48,6 +58,8 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
@@ -56,17 +68,30 @@ import javax.inject.Singleton;
 @Singleton
 public final class ClientImpl implements Client {
   private static final Logger LOGGER = LoggerFactory.getLogger(ClientImpl.class);
+
+  private final List<Shard> shards;
+
+  // Users
   private final Long2ObjectMap<User> users = new Long2ObjectOpenHashMap<>();
   private final UserImpl.Factory userFactory;
-  private final List<Shard> shards;
+
+  // Channels
+  private final Long2ObjectMap<Channel> channels = new Long2ObjectOpenHashMap<>();
+  private final ExecutorService executor;
+  private final RateLimitedHttpClient httpClient;
+  private final PrivateChannelImpl.Factory channelFactory;
+
   // Presence
   private @NonNull Status status = Status.ONLINE;
   private @Nullable Activity activityType;
   private @Nullable String activityName;
 
   @Inject
-  private ClientImpl(final PolarConfiguration configuration, final UserImpl.Factory userFactory, final ShardImpl.Factory shard) {
+  private ClientImpl(final PolarConfiguration configuration, final ShardImpl.Factory shard, final UserImpl.Factory userFactory, final ExecutorService executor, final RateLimitedHttpClient httpClient, final PrivateChannelImpl.Factory channelFactory) {
     this.userFactory = userFactory;
+    this.executor = executor;
+    this.httpClient = httpClient;
+    this.channelFactory = channelFactory;
     this.shards = new ArrayList<>(configuration.shards());
     for(int i = 0; i < configuration.shards(); i++) {
       this.shards.add(i, shard.create(i));
@@ -128,5 +153,36 @@ public final class ClientImpl implements Client {
       this.users.put(Json.needLong(json, "id"), user);
       return user;
     });
+  }
+
+  public Optional<Channel> channel(final @Snowflake long id) {
+    return Optional.ofNullable(this.channels.get(id));
+  }
+
+  public CompletableFuture<PrivateChannel> requestPrivateChannel(final UserImpl user) {
+    final CompletableFuture<PrivateChannel> future = new CompletableFuture<>();
+    this.executor.submit(() -> {
+      this.httpClient
+        .json(Endpoints.createPrivateChannel().request(builder -> builder.post(RequestBody.create(HttpClient.JSON_MEDIA_TYPE, EvenMoreObjects.make(new JsonObject(), object -> object.addProperty("recipient_id", user.id())).toString()))))
+        .whenComplete((element, throwable) -> {
+          if(throwable != null) {
+            future.completeExceptionally(throwable);
+          } else {
+            element.map(JsonElement::getAsJsonObject)
+              .ifPresent(object -> {
+                final @Snowflake long id = Channels.recipient(object);
+                future.complete(this.privateChannel(user, id));
+              });
+          }
+        });
+    });
+    return future;
+  }
+
+  public PrivateChannel privateChannel(final UserImpl user, final @Snowflake long id) {
+    final PrivateChannel channel = this.channelFactory.create(id);
+    this.channels.put(id, channel);
+    user.channel(channel);
+    return channel;
   }
 }

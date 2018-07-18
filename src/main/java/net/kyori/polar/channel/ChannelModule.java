@@ -21,30 +21,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package net.kyori.polar;
+package net.kyori.polar.channel;
 
-import net.kyori.polar.channel.ChannelModule;
-import net.kyori.polar.channel.message.MessageModule;
-import net.kyori.polar.client.ClientModule;
-import net.kyori.polar.gateway.GatewayModule;
-import net.kyori.polar.guild.GuildModule;
-import net.kyori.polar.http.HttpModule;
-import net.kyori.polar.shard.ShardModule;
-import net.kyori.polar.user.UserModule;
 import net.kyori.violet.AbstractModule;
 
-public final class PolarModule extends AbstractModule {
+public final class ChannelModule extends AbstractModule {
   @Override
   protected void configure() {
-    this.install(new HttpModule());
-
-    this.install(new ClientModule());
-    this.install(new GatewayModule());
-    this.install(new ShardModule());
-
-    this.install(new ChannelModule());
-    this.install(new GuildModule());
-    this.install(new MessageModule());
-    this.install(new UserModule());
+    this.installFactory(PrivateChannelImpl.Factory.class);
+    this.installFactory(TextChannelImpl.Factory.class);
   }
 }

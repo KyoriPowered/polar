@@ -41,6 +41,8 @@ public final class Endpoints {
 
   private static final ParameterizedEndpoint EDIT_GUILD_ROLE = new ParameterizedEndpoint(Polar.API_URL + "/guilds/{guild_id}/roles/{role_id}");
 
+  private static final SimpleEndpoint CREATE_PRIVATE_CHANNEL = new SimpleEndpoint(Polar.API_URL + "/users/@me/channels");
+
   private Endpoints() {
   }
 
@@ -78,5 +80,9 @@ public final class Endpoints {
 
   public static Endpoint editGuildRole(final @Snowflake long guild_id, final @Snowflake long role_id) {
     return EDIT_GUILD_ROLE.with(guild_id, role_id);
+  }
+
+  public static Endpoint createPrivateChannel() {
+    return CREATE_PRIVATE_CHANNEL;
   }
 }

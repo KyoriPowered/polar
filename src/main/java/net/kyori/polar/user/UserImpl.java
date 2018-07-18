@@ -27,28 +27,34 @@ import com.google.common.base.MoreObjects;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import net.kyori.kassel.channel.PrivateChannel;
 import net.kyori.kassel.user.User;
 import net.kyori.peppermint.Json;
+import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import javax.inject.Inject;
 
 public final class UserImpl extends SnowflakedImpl implements Refreshable, User {
   private final UserRefresher refresher;
+  private final ClientImpl client;
   private @NonNull String username;
   private @NonNull String discriminator;
   private @Nullable String avatar;
   private boolean bot;
+  private @Nullable PrivateChannel channel;
 
   @Inject
-  private UserImpl(final UserRefresher refresher, final @Assisted JsonObject json) {
+  private UserImpl(final UserRefresher refresher, final ClientImpl client, final @Assisted JsonObject json) {
     super(Json.needLong(json, "id"));
     this.refresher = refresher;
+    this.client = client;
     this.username = Json.needString(json, "username");
     this.discriminator = Json.needString(json, "discriminator");
     this.avatar = Json.getString(json, "avatar", null);
@@ -90,6 +96,18 @@ public final class UserImpl extends SnowflakedImpl implements Refreshable, User 
   @Override
   public boolean bot() {
     return this.bot;
+  }
+
+  @Override
+  public @NonNull CompletableFuture<PrivateChannel> channel() {
+    if(this.channel != null) {
+      return CompletableFuture.completedFuture(this.channel);
+    }
+    return this.client.requestPrivateChannel(this);
+  }
+
+  public void channel(final PrivateChannel channel) {
+    this.channel = channel;
   }
 
   @Override

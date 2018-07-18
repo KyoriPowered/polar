@@ -68,14 +68,17 @@ import net.kyori.lunar.Optionals;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.ChannelTypes;
+import net.kyori.polar.channel.Channels;
 import net.kyori.polar.channel.message.MessageImpl;
 import net.kyori.polar.channel.message.emoji.Emojis;
+import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.guild.GuildImpl;
 import net.kyori.polar.guild.channel.GuildTextChannelImpl;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.shard.Shard;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import net.kyori.polar.user.Activities;
+import net.kyori.polar.user.UserImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -348,7 +351,12 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
               }
             })));
         break;
-      case ChannelTypes.DM: /* NOOP */ break;
+      case ChannelTypes.DM:
+        if(Channels.hasRecipient(json)) {
+          Optionals.cast(this.client.user(Channels.recipient(json)), UserImpl.class)
+            .ifPresent(user -> ((ClientImpl) this.client).privateChannel(user, Json.needLong(json, "id")));
+        }
+        break;
       case ChannelTypes.GROUP_DM: /* NOOP */ break;
     }
   }

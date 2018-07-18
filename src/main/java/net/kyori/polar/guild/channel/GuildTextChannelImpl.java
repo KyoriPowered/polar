@@ -24,57 +24,39 @@
 package net.kyori.polar.guild.channel;
 
 import com.google.common.base.MoreObjects;
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.GuildTextChannel;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.peppermint.Json;
-import net.kyori.polar.ForPolar;
-import net.kyori.polar.channel.message.MessageImpl;
-import net.kyori.polar.http.HttpClient;
-import net.kyori.polar.http.RateLimitedHttpClient;
-import net.kyori.polar.http.endpoint.Endpoints;
+import net.kyori.polar.channel.TextChannelImpl;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
-import net.kyori.polar.util.BoundedLong2ObjectLinkedOpenHashMap;
-import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 import javax.inject.Inject;
 
-import static com.google.common.base.Preconditions.checkState;
-
 public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildTextChannel, Refreshable {
   private static final int MAX_CACHED_MESSAGES = 20;
-  private final Long2ObjectMap<Message> messages = BoundedLong2ObjectLinkedOpenHashMap.sync(MAX_CACHED_MESSAGES);
   private final GuildTextChannelRefresher refresher;
-  private final ExecutorService executor;
-  private final RateLimitedHttpClient httpClient;
-  private final Gson gson;
-  private final MessageImpl.Factory messageFactory;
+  private final TextChannelImpl textChannel;
   private final Guild guild;
   private @NonNull String name;
   private @Nullable String topic;
 
   @Inject
-  private GuildTextChannelImpl(final GuildTextChannelRefresher refresher, final ExecutorService executor, final RateLimitedHttpClient httpClient, final @ForPolar Gson gson, final MessageImpl.Factory messageFactory, final @Assisted Guild guild, final @Assisted JsonObject json) {
+  private GuildTextChannelImpl(final GuildTextChannelRefresher refresher, final TextChannelImpl.Factory textChannel, final @Assisted Guild guild, final @Assisted JsonObject json) {
     super(Json.needLong(json, "id"));
     this.refresher = refresher;
-    this.executor = executor;
-    this.httpClient = httpClient;
-    this.gson = gson;
-    this.messageFactory = messageFactory;
+    this.textChannel = textChannel.create(this, MAX_CACHED_MESSAGES);
     this.guild = guild;
     this.name = Json.needString(json, "name");
     this.topic = Json.getString(json, "topic", null);
@@ -116,42 +98,20 @@ public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildT
 
   @Override
   public @NonNull Optional<Message> message(final @Snowflake long id) {
-    return Optional.ofNullable(this.messages.get(id));
+    return this.textChannel.message(id);
   }
 
   public void putMessage(final @Snowflake long id, final Message message) {
-    this.messages.put(id, message);
+    this.textChannel.putMessage(id, message);
   }
 
   public @NonNull Optional<Message> removeMessage(final @Snowflake long id) {
-    return Optional.ofNullable(this.messages.remove(id));
+    return this.textChannel.removeMessage(id);
   }
 
   @Override
   public @NonNull CompletableFuture<Message> message(final @Nullable String content, final @Nullable Embed embed) {
-    checkState(!(content == null && embed == null), "content and embed are both null");
-    final JsonObject json = new JsonObject();
-    if(content != null) {
-      checkState(content.length() <= Message.MAXIMUM_LENGTH, "content too long; %s > %s", content.length(), Message.MAXIMUM_LENGTH);
-      json.addProperty("content", content);
-    } else {
-      json.addProperty("content", "");
-    }
-    if(embed != null) {
-      json.add("embed", this.gson.toJsonTree(embed));
-    }
-    final CompletableFuture<Message> future = new CompletableFuture<>();
-    this.executor.submit(() -> this.httpClient
-      .json(Endpoints.sendMessage(this.id).request(builder -> builder.post(RequestBody.create(HttpClient.JSON_MEDIA_TYPE, json.toString()))))
-      .whenComplete((element, throwable) -> {
-        if(throwable != null) {
-          future.completeExceptionally(throwable);
-        } else {
-          element.map(JsonElement::getAsJsonObject)
-            .ifPresent(object -> future.complete(GuildTextChannelImpl.this.messageFactory.create(GuildTextChannelImpl.this, object)));
-        }
-      }));
-    return future;
+    return this.textChannel.message(content, embed);
   }
 
   @Override
