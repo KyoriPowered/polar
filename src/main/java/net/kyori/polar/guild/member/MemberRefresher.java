@@ -70,7 +70,7 @@ final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Contex
         return newNick;
       }
     });
-    this.complexField(member -> new LongArraySet(member.roles), json -> {
+    this.complexField(member -> new LongArraySet(member.roles.roles), json -> {
       final LongSet roles = new LongArraySet();
       for(final JsonElement role : json.getAsJsonArray("roles")) {
         roles.add(Json.needLong(role, "id"));

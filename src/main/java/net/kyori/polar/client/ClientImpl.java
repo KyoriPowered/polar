@@ -147,6 +147,14 @@ public final class ClientImpl implements Client {
     this.shards.forEach(shard -> shard.presence(this.status, this.activityType, this.activityName));
   }
 
+  public @NonNull ExecutorService executor() {
+    return this.executor;
+  }
+
+  public @NonNull RateLimitedHttpClient httpClient() {
+    return this.httpClient;
+  }
+
   public @NonNull User userOrCreate(final JsonObject json) {
     return this.user(Json.needLong(json, "id")).orElseGet(() -> {
       final User user = this.userFactory.create(json);

@@ -39,6 +39,8 @@ public final class Endpoints {
   private static final ParameterizedEndpoint DELETE_REACTION = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/{who}", "channel_id", "message_id");
   private static final ParameterizedEndpoint DELETE_REACTIONS = new ParameterizedEndpoint(Polar.API_URL + "/channels/{channel_id}/messages/{message_id}/reactions", "channel_id", "message_id");
 
+  private static final ParameterizedEndpoint GUILD_MEMBER_ROLE = new ParameterizedEndpoint(Polar.API_URL + "/guilds/{guild_id}/members/{user_id}/roles/{role_id}");
+
   private static final ParameterizedEndpoint EDIT_GUILD_ROLE = new ParameterizedEndpoint(Polar.API_URL + "/guilds/{guild_id}/roles/{role_id}");
 
   private static final SimpleEndpoint CREATE_PRIVATE_CHANNEL = new SimpleEndpoint(Polar.API_URL + "/users/@me/channels");
@@ -76,6 +78,10 @@ public final class Endpoints {
 
   public static Endpoint deleteReactions(final @Snowflake long channel_id, final @Snowflake long message_id) {
     return DELETE_REACTIONS.with(channel_id, message_id);
+  }
+
+  public static Endpoint guildMemberRole(final @Snowflake long guild_id, final @Snowflake long user_id, final @Snowflake long role_id) {
+    return GUILD_MEMBER_ROLE.with(guild_id, user_id, role_id);
   }
 
   public static Endpoint editGuildRole(final @Snowflake long guild_id, final @Snowflake long role_id) {

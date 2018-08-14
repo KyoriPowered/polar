@@ -36,7 +36,10 @@ import net.kyori.kassel.user.User;
 import net.kyori.lunar.EvenMoreObjects;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.client.ClientImpl;
+import net.kyori.polar.http.endpoint.Endpoints;
 import net.kyori.polar.refresh.Refreshable;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -48,7 +51,8 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 public final class MemberImpl implements Member, Refreshable {
-  final LongSet roles = new LongArraySet();
+  final RolesImpl roles = new RolesImpl();
+  private final ClientImpl client;
   private final MemberRefresher refresher;
   private final Guild guild;
   private final User user;
@@ -56,6 +60,7 @@ public final class MemberImpl implements Member, Refreshable {
 
   @Inject
   private MemberImpl(final ClientImpl client, final MemberRefresher refresher, final @Assisted Guild guild, final @Assisted JsonObject json) {
+    this.client = client;
     this.refresher = refresher;
     this.guild = guild;
     this.user = client.userOrCreate(json.getAsJsonObject("user"));
@@ -63,7 +68,7 @@ public final class MemberImpl implements Member, Refreshable {
 
     if(Json.isArray(json, "roles")) {
       for(final JsonElement role : json.getAsJsonArray("roles")) {
-        this.roles.add(Json.needLong(role, "id"));
+        this.roles.roles.add(Json.needLong(role, "id"));
       }
     }
   }
@@ -77,7 +82,7 @@ public final class MemberImpl implements Member, Refreshable {
       }
 
       @Override
-      public MemberImpl target() {
+      public @NonNull MemberImpl target() {
         return MemberImpl.this;
       }
     }, json);
@@ -94,16 +99,12 @@ public final class MemberImpl implements Member, Refreshable {
   }
 
   @Override
-  public @NonNull Stream<Role> roles() {
-    return this.roles.stream()
-      .map(this.guild::role)
-      .filter(Optional::isPresent)
-      .map(Optional::get);
+  public @NonNull Roles roles() {
+    return this.roles;
   }
 
   void roles(final @NonNull LongSet roles) {
-    this.roles.clear();
-    this.roles.addAll(roles);
+    this.roles.set(roles);
   }
 
   void nick(final @NonNull Optional<String> nick) {
@@ -125,8 +126,39 @@ public final class MemberImpl implements Member, Refreshable {
     return MoreObjects.toStringHelper(this)
       .add("user", this.user)
       .add("nick", this.nick)
-      .add("roles", this.roles().collect(Collectors.toSet()))
+      .add("roles", this.roles.all().collect(Collectors.toSet()))
       .toString();
+  }
+
+  final class RolesImpl implements Roles {
+    final LongSet roles = new LongArraySet();
+
+    @Override
+    public @NonNull Stream<Role> all() {
+      return this.roles.stream()
+        .map(MemberImpl.this.guild::role)
+        .filter(Optional::isPresent)
+        .map(Optional::get);
+    }
+
+    @Override
+    public void add(final @NonNull Role role) {
+      MemberImpl.this.client.executor().submit(() -> {
+        MemberImpl.this.client.httpClient().json(Endpoints.guildMemberRole(MemberImpl.this.guild.id(), MemberImpl.this.user.id(), role.id()).request(builder -> builder.put(RequestBody.create(null, new byte[0]))));
+      });
+    }
+
+    @Override
+    public void remove(final @NonNull Role role) {
+      MemberImpl.this.client.executor().submit(() -> {
+        MemberImpl.this.client.httpClient().json(Endpoints.guildMemberRole(MemberImpl.this.guild.id(), MemberImpl.this.user.id(), role.id()).request(Request.Builder::delete));
+      });
+    }
+
+    void set(final @NonNull LongSet roles) {
+      this.roles.clear();
+      this.roles.addAll(roles);
+    }
   }
 
   public interface Factory {
