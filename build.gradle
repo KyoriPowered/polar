@@ -37,7 +37,7 @@ dependencies {
   compile 'com.squareup.okhttp3:okhttp:3.10.0'
   compile 'it.unimi.dsi:fastutil:8.1.1'
   compile 'net.kyori:cereal:1.0.5-SNAPSHOT'
-  compile 'net.kyori:event:1.1.0-SNAPSHOT'
+  compile 'net.kyori:event-api:3.0.0'
   compile 'net.kyori:kassel:1.0.0-SNAPSHOT'
   compile 'net.kyori:lunar:1.0.6-SNAPSHOT'
   compile('net.kyori:peppermint:1.0.6-SNAPSHOT') {

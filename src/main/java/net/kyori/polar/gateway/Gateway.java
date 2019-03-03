@@ -109,7 +109,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private final PolarConfiguration configuration;
   private final ScheduledExecutorService scheduler;
-  private final EventBus<Object, Object> bus;
+  private final EventBus<Object> bus;
   private final Client client;
   private final Shard shard;
   private final GatewayUrl url;
@@ -130,7 +130,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private long lastSequence = -1;
 
   @Inject
-  private Gateway(final PolarConfiguration configuration, final ScheduledExecutorService scheduler, final EventBus<Object, Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
+  private Gateway(final PolarConfiguration configuration, final ScheduledExecutorService scheduler, final EventBus<Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
     this.configuration = configuration;
     this.scheduler = scheduler;
     this.bus = bus;

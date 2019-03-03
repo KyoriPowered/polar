@@ -39,7 +39,7 @@ import javax.inject.Inject;
 
 public abstract class Refresher<T, C extends RefreshContext<T>> {
   private final List<Entry<?>> entries = new ArrayList<>();
-  protected @Inject EventBus<Object, Object> bus;
+  protected @Inject EventBus<Object> bus;
 
   protected Refresher() {
     this.register();
