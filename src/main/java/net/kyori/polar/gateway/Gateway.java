@@ -95,6 +95,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
@@ -106,6 +107,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private static final Logger LOGGER = LoggerFactory.getLogger(Gateway.class);
   private static final JsonParser PARSER = new JsonParser();
   private static final int RECONNECT_SECONDS = 5;
+  private static final int MAX_RECONNECT_ATTEMPTS = 3;
 
   private final PolarConfiguration configuration;
   private final ScheduledExecutorService scheduler;
@@ -119,6 +121,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private WebSocket ws;
   private Inflater inflater;
+
+  private final AtomicInteger connectionAttempts = new AtomicInteger();
 
   // Heartbeat
   private final AtomicReference<Future<?>> heartbeat = new AtomicReference<>();
@@ -151,13 +155,25 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
     } catch(final NoSuchAlgorithmException e) {
       LOGGER.error("Encountered an exception while setting SSL context", e);
     }
+    while(!this.tryConnect(factory)) {
+      if(this.connectionAttempts.incrementAndGet() >= MAX_RECONNECT_ATTEMPTS) {
+        break;
+      }
+    }
+  }
+
+  private boolean tryConnect(final WebSocketFactory factory) {
     try {
-      this.ws = factory.createSocket(this.url.get())
+      final WebSocket ws = factory.createSocket(this.url.get())
         .addHeader("Accept-Encoding", "gzip")
         .addListener(this);
-      this.ws.connect();
+      ws.connect();
+      this.ws = ws;
+      this.connectionAttempts.set(0);
+      return true;
     } catch(final IOException | WebSocketException e) {
       LOGGER.error("Encountered an exception while creating socket", e);
+      return false;
     }
   }
 
