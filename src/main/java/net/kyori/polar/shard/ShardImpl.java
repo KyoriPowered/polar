@@ -23,6 +23,7 @@
  */
 package net.kyori.polar.shard;
 
+import com.google.common.base.MoreObjects;
 import com.google.inject.assistedinject.Assisted;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -93,6 +94,14 @@ public final class ShardImpl implements Shard {
   public void disconnect() {
     LOGGER.debug("Disconnecting shard {}...", this.id);
     this.gateway.disconnect();
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+      .add("id", this.id)
+      .add("gateway", this.gateway)
+      .toString();
   }
 
   public interface Factory {

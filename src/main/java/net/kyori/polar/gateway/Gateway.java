@@ -23,6 +23,7 @@
  */
 package net.kyori.polar.gateway;
 
+import com.google.common.base.MoreObjects;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
@@ -35,6 +36,8 @@ import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
 import com.neovisionaries.ws.client.WebSocketFrame;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.kyori.event.EventBus;
 import net.kyori.kassel.Connectable;
 import net.kyori.kassel.channel.Channel;
@@ -88,6 +91,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -132,6 +136,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private State state;
   private @Nullable String sessionId;
   private long lastSequence = -1;
+  private final Int2ObjectMap<Instant> lastMessage = new Int2ObjectOpenHashMap<>();
 
   @Inject
   private Gateway(final PolarConfiguration configuration, final ScheduledExecutorService scheduler, final EventBus<Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
@@ -143,6 +148,15 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
     this.url = url;
     this.guildFactory = guildFactory;
     this.messageFactory = messageFactory;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+      .add("lastMessage", this.lastMessage)
+      .add("lastSequence", this.lastSequence)
+      .add("state", this.state)
+      .toString();
   }
 
   @Override
@@ -201,16 +215,10 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
     if(closedByServer) {
       if(serverCloseFrame != null) {
         reconnect = this.canReconnect(serverCloseFrame.getCloseCode());
-        LOGGER.info("Shard {} disconnected from gateway by server ({}: {})", this.shard.id(), serverCloseFrame.getCloseCode(), serverCloseFrame.getCloseReason());
-      } else {
-        LOGGER.info("Shard {} disconnected from gateway by server", this.shard.id());
       }
+      this.frameClosed(serverCloseFrame, "server");
     } else if(clientCloseFrame != null) {
-      switch(clientCloseFrame.getCloseCode()) {
-        case 1000:
-          LOGGER.info("Shard {} disconnected from gateway by client ({}: {})", this.shard.id(), clientCloseFrame.getCloseCode(), clientCloseFrame.getCloseReason());
-          break;
-      }
+      this.frameClosed(clientCloseFrame, "client");
     }
 
     if(this.state == State.RESUMING) {
@@ -223,13 +231,26 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
     if(!reconnect) {
       this.state = State.DISCONNECTED;
-      LOGGER.info("Shard {} disconnected from gateway", this.shard.id());
+      LOGGER.info("Shard {} disconnected from gateway ({})", this.shard.id(), this);
       return;
     }
 
     this.state = State.RESUMING;
-    LOGGER.info("Reconnecting shard {} to gateway in {} seconds...", this.shard.id(), RECONNECT_SECONDS);
+    LOGGER.info("Reconnecting shard {} to gateway ({}) in {} seconds...", this.shard.id(), this, RECONNECT_SECONDS);
     this.scheduler.schedule(this::connect, RECONNECT_SECONDS, TimeUnit.SECONDS);
+  }
+
+  private void frameClosed(final @Nullable WebSocketFrame frame, final String name) {
+    if(frame != null) {
+      final String reason = frame.getCloseReason();
+      if(reason != null) {
+        LOGGER.info("Shard {} disconnected from gateway ({}) by {} ({}: {})", this.shard.id(), this, name, frame.getCloseCode(), reason);
+      } else {
+        LOGGER.info("Shard {} disconnected from gateway ({}) by {} ({})", this.shard.id(), this, name, frame.getCloseCode());
+      }
+    } else {
+      LOGGER.info("Shard {} disconnected from gateway ({}) by {}", this.shard.id(), this, name);
+    }
   }
 
   private boolean canReconnect(final int code) {
@@ -291,6 +312,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private void onMessage(final WebSocket ws, final JsonObject json) {
     final int opcode = Json.needInt(json, GatewayPayload.OPCODE);
+    this.lastMessage.put(opcode, Instant.now());
     switch(opcode) {
       case GatewayOpcode.DISPATCH: this.dispatch(ws, json); break;
       case GatewayOpcode.HEARTBEAT: this.heartbeat(ws); break;
