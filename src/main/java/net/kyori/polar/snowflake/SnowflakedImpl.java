@@ -26,9 +26,9 @@ package net.kyori.polar.snowflake;
 import com.google.common.base.MoreObjects;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.kassel.snowflake.Snowflaked;
-import net.kyori.lunar.EvenMoreObjects;
 
 import java.util.Objects;
+import net.kyori.polar.util.Equality;
 
 public class SnowflakedImpl implements Snowflaked {
   protected final @Snowflake long id;
@@ -54,7 +54,7 @@ public class SnowflakedImpl implements Snowflaked {
 
   @Override
   public boolean equals(final Object other) {
-    return EvenMoreObjects.equals(this, other, that -> this.id == that.id);
+    return Equality.equals(this, other, that -> this.id == that.id);
   }
 
   @Override

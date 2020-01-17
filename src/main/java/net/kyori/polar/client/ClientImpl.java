@@ -37,8 +37,8 @@ import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
 import net.kyori.kassel.user.User;
-import net.kyori.lunar.EvenMoreObjects;
-import net.kyori.lunar.exception.Exceptions;
+import net.kyori.mu.Composer;
+import net.kyori.mu.function.ThrowingConsumer;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.Channels;
@@ -101,13 +101,13 @@ public final class ClientImpl implements Client {
   @Override
   public void connect() {
     LOGGER.debug("Connecting shards...");
-    this.shards.forEach(Exceptions.rethrowConsumer(Connectable::connect));
+    this.shards.forEach(ThrowingConsumer.of(Connectable::connect));
   }
 
   @Override
   public void disconnect() {
     LOGGER.debug("Disconnecting shards...");
-    this.shards.forEach(Exceptions.rethrowConsumer(Connectable::disconnect));
+    this.shards.forEach(ThrowingConsumer.of(Connectable::disconnect));
   }
 
   @Override
@@ -171,7 +171,7 @@ public final class ClientImpl implements Client {
     final CompletableFuture<PrivateChannel> future = new CompletableFuture<>();
     this.executor.submit(() -> {
       this.httpClient
-        .json(Endpoints.createPrivateChannel().request(builder -> builder.post(RequestBody.create(HttpClient.JSON_MEDIA_TYPE, EvenMoreObjects.make(new JsonObject(), object -> object.addProperty("recipient_id", user.id())).toString()))))
+        .json(Endpoints.createPrivateChannel().request(builder -> builder.post(RequestBody.create(HttpClient.JSON_MEDIA_TYPE, Composer.accept(new JsonObject(), object -> object.addProperty("recipient_id", user.id())).toString()))))
         .whenComplete((element, throwable) -> {
           if(throwable != null) {
             future.completeExceptionally(throwable);

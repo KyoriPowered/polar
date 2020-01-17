@@ -25,7 +25,7 @@ package net.kyori.polar.gateway;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import net.kyori.lunar.exception.Exceptions;
+import net.kyori.mu.function.ThrowingSupplier;
 import net.kyori.polar.Polar;
 import net.kyori.polar.http.HttpClient;
 import net.kyori.polar.http.ImmediateHttpClient;
@@ -37,7 +37,7 @@ import javax.inject.Inject;
 final class GatewayUrl extends Lazy<String> {
   @Inject
   private GatewayUrl(final ImmediateHttpClient httpClient) {
-    super(Exceptions.rethrowSupplier(() -> {
+    super(ThrowingSupplier.of(() -> {
       final String url = httpClient.json(Endpoints.gateway().request(), HttpClient.UNAUTHENTICATED).get()
         .map(JsonElement::getAsJsonObject)
         .map(o -> o.getAsJsonPrimitive("url"))

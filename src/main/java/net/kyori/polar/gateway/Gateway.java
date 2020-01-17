@@ -66,8 +66,8 @@ import net.kyori.kassel.guild.role.event.GuildRoleDeleteEvent;
 import net.kyori.kassel.snowflake.Snowflaked;
 import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
-import net.kyori.lunar.EvenMoreObjects;
-import net.kyori.lunar.Optionals;
+import net.kyori.mu.Composer;
+import net.kyori.mu.Optionals;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.ChannelTypes;
@@ -280,7 +280,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       d.add("since", JsonNull.INSTANCE);
       d.addProperty("status", status.name().toLowerCase(Locale.ENGLISH));
       if(activityType != null && activityName != null) {
-        d.add("game", EvenMoreObjects.make(new JsonObject(), game -> {
+        d.add("game", Composer.accept(new JsonObject(), game -> {
           game.addProperty("type", Activities.activity(activityType));
           game.addProperty("name", activityName);
         }));

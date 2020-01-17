@@ -24,7 +24,7 @@
 package net.kyori.polar.http;
 
 import com.google.gson.JsonElement;
-import net.kyori.lunar.EvenMoreObjects;
+import net.kyori.mu.Composer;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.http.endpoint.EndpointRequest;
 import okhttp3.OkHttpClient;
@@ -54,7 +54,7 @@ final class ImmediateHttpClientImpl extends AbstractHttpClient implements Immedi
   }
 
   private void request(final @NonNull EndpointRequest request, final CompletableFuture<Response> response, final int flags) {
-    this.request(EvenMoreObjects.make(new Request.Builder(), request::configure), response, flags);
+    this.request(Composer.accept(new Request.Builder(), request::configure), response, flags);
   }
 
   private void request(final Request.@NonNull Builder request, final CompletableFuture<Response> response, final int flags) {

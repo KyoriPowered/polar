@@ -21,44 +21,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package net.kyori.polar.channel.message.emoji;
+package net.kyori.polar.util;
 
-import com.google.gson.JsonObject;
-import net.kyori.kassel.channel.message.emoji.UnicodeEmoji;
-import net.kyori.peppermint.Json;
-import net.kyori.polar.util.Equality;
+import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.Objects;
-
-public final class UnicodeEmojiImpl implements UnicodeEmoji {
-  private final String name;
-
-  UnicodeEmojiImpl(final @NonNull JsonObject json) {
-    this(Json.needString(json, "name"));
+public class Equality {
+  /**
+   * Tests if {@code you} equals {@code me}.
+   *
+   * @param me this
+   * @param you that
+   * @param predicate the predicate
+   * @param <T> the type
+   * @return {@code true} if {@code you} equals {@code me}
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> boolean equals(final @NonNull T me, final @Nullable Object you, final @NonNull Predicate<T> predicate) {
+    final Class<T> type = (Class<T>) me.getClass();
+    return equals(type, me, you, predicate);
   }
 
-  UnicodeEmojiImpl(final @NonNull String name) {
-    this.name = name;
-  }
-
-  @Override
-  public @NonNull String name() {
-    return this.name;
-  }
-
-  @Override
-  public boolean animated() {
-    return false;
-  }
-
-  @Override
-  public boolean equals(final Object other) {
-    return Equality.equals(this, other, that -> this.name.equals(that.name));
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(this.name);
+  /**
+   * Tests if {@code you} equals {@code me}.
+   *
+   * @param type the type of {@code me}
+   * @param me this
+   * @param you that
+   * @param predicate the predicate
+   * @param <T> the type
+   * @return {@code true} if {@code you} equals {@code me}
+   */
+  public static <T> boolean equals(final @NonNull Class<T> type, final @NonNull T me, final @Nullable Object you, final @NonNull Predicate<T> predicate) {
+    return me == you || (you != null && type.isInstance(you) && predicate.test(type.cast(you)));
   }
 }

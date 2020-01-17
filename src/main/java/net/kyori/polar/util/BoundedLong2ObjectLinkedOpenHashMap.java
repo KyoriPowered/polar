@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 
 import static com.google.common.base.Preconditions.checkState;
 
+@SuppressWarnings("serial")
 public final class BoundedLong2ObjectLinkedOpenHashMap<V> extends Long2ObjectLinkedOpenHashMap<V> {
   private final int maxSize;
 

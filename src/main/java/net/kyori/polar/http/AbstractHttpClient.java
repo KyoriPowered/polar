@@ -25,7 +25,7 @@ package net.kyori.polar.http;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import net.kyori.lunar.concurrent.MoreFutures;
+import net.kyori.mu.concurrent.CompletableFutures;
 import net.kyori.polar.Polar;
 import net.kyori.polar.PolarConfiguration;
 import okhttp3.OkHttpClient;
@@ -64,13 +64,13 @@ abstract class AbstractHttpClient implements HttpClient {
     return future.thenCompose(response -> {
       final @Nullable ResponseBody body = response.body();
       if(body == null) {
-        return MoreFutures.emptyOptionalFuture();
+        return CompletableFuture.completedFuture(Optional.empty());
       }
       final JsonElement json;
       try {
         json = PARSER.parse(body.string());
       } catch(final IOException e) {
-        return MoreFutures.immediateFailedFuture(e);
+        return CompletableFutures.completedExceptionally(e);
       }
       body.close();
       return CompletableFuture.completedFuture(Optional.of(json));

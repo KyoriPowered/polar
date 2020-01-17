@@ -39,7 +39,7 @@ dependencies {
   compile 'net.kyori:cereal:1.0.5-SNAPSHOT'
   compile 'net.kyori:event-api:3.0.0'
   compile 'net.kyori:kassel:1.0.0-SNAPSHOT'
-  compile 'net.kyori:lunar:1.0.6-SNAPSHOT'
+  compile 'net.kyori:mu:1.0.0-SNAPSHOT'
   compile('net.kyori:peppermint:1.0.6-SNAPSHOT') {
     exclude group: 'com.google.code.gson', module: 'gson'
   }

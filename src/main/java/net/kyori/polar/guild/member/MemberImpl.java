@@ -33,11 +33,11 @@ import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.member.Member;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.user.User;
-import net.kyori.lunar.EvenMoreObjects;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.http.endpoint.Endpoints;
 import net.kyori.polar.refresh.Refreshable;
+import net.kyori.polar.util.Equality;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -113,7 +113,7 @@ public final class MemberImpl implements Member, Refreshable {
 
   @Override
   public boolean equals(final Object other) {
-    return EvenMoreObjects.equals(this, other, that -> this.user.id() == that.user.id());
+    return Equality.equals(this, other, that -> this.user.id() == that.user.id());
   }
 
   @Override

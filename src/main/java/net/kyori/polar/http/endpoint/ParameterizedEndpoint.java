@@ -62,6 +62,7 @@ final class ParameterizedEndpoint {
     }
   }
 
+  @SuppressWarnings("RedundantCast")
   Endpoint with(final Object... args) {
     final String url = String.format(this.route, (Object[]) args);
     String identity = this.identity;
