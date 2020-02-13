@@ -152,6 +152,8 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
       case ChannelTypes.GUILD_VOICE: channel = this.factories.voiceChannel(this, json); break;
       case ChannelTypes.DM: throw new UnsupportedOperationException("dm");
       case ChannelTypes.GROUP_DM: throw new UnsupportedOperationException("group_dm");
+      case ChannelTypes.GUILD_NEWS: return Optional.empty();
+      case ChannelTypes.GUILD_STORE: return Optional.empty(); // bots cannot read or send from a store channel type (it is just a store page)
       default: throw new IllegalArgumentException(String.valueOf(Json.needInt(json, "type")));
     }
 

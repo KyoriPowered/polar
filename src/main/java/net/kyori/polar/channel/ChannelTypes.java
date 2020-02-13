@@ -29,4 +29,6 @@ public interface ChannelTypes {
   int GUILD_VOICE = 2;
   int GROUP_DM = 3;
   int GUILD_CATEGORY = 4;
+  int GUILD_NEWS = 5; // "announcement channel"
+  int GUILD_STORE = 6;
 }

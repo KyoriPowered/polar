@@ -38,7 +38,7 @@ public final class CustomEmojiImpl extends SnowflakedImpl implements CustomEmoji
     this(
       Json.needLong(json, "id"),
       Json.needString(json, "name"),
-      Json.needBoolean(json, "animated")
+      Json.getBoolean(json, "animated", false)
     );
   }
 

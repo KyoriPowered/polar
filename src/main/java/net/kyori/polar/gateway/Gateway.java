@@ -429,8 +429,9 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       case ChannelTypes.GUILD_TEXT:
       case ChannelTypes.GUILD_VOICE:
         this.shard.guild(Json.needLong(json, "guild_id"))
-          .ifPresent(guild -> Optionals.cast(guild.channel(Json.needLong(json, "id")), Refreshable.class)
-            .ifPresent(channel -> channel.refresh(json)));
+          .map(guild -> guild.channel(Json.needLong(json, "id")))
+          .flatMap(channel -> Optionals.cast(channel, Refreshable.class))
+          .ifPresent(channel -> channel.refresh(json));
         break;
       case ChannelTypes.DM: /* NOOP */ break;
       case ChannelTypes.GROUP_DM: /* NOOP */ break;
@@ -514,8 +515,9 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private void dispatchGuildMemberUpdate(final JsonObject json) {
     this.shard.guild(Json.needLong(json, "guild_id"))
-      .ifPresent(guild -> Optionals.cast(guild.member(Json.needLong(json.getAsJsonObject("user"), "id")), Refreshable.class)
-        .ifPresent(member -> member.refresh(json)));
+      .map(guild -> guild.member(Json.needLong(json.getAsJsonObject("user"), "id")))
+      .flatMap(member -> Optionals.cast(member, Refreshable.class))
+      .ifPresent(member -> member.refresh(json));
   }
 
   private void dispatchGuildMembersChunk(final JsonObject json) {
