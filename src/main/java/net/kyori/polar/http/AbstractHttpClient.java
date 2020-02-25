@@ -25,6 +25,10 @@ package net.kyori.polar.http;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import javax.inject.Inject;
+import net.kyori.mu.Maybe;
 import net.kyori.mu.concurrent.CompletableFutures;
 import net.kyori.polar.Polar;
 import net.kyori.polar.PolarConfiguration;
@@ -34,12 +38,6 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import javax.inject.Inject;
 
 abstract class AbstractHttpClient implements HttpClient {
   static final JsonParser PARSER = new JsonParser();
@@ -60,11 +58,11 @@ abstract class AbstractHttpClient implements HttpClient {
     return request.build();
   }
 
-  final CompletableFuture<Optional<JsonElement>> json(final CompletableFuture<Response> future) {
+  final CompletableFuture<Maybe<JsonElement>> json(final CompletableFuture<Response> future) {
     return future.thenCompose(response -> {
       final @Nullable ResponseBody body = response.body();
       if(body == null) {
-        return CompletableFuture.completedFuture(Optional.empty());
+        return CompletableFuture.completedFuture(Maybe.nothing());
       }
       final JsonElement json;
       try {
@@ -73,7 +71,7 @@ abstract class AbstractHttpClient implements HttpClient {
         return CompletableFutures.completedExceptionally(e);
       }
       body.close();
-      return CompletableFuture.completedFuture(Optional.of(json));
+      return CompletableFuture.completedFuture(Maybe.just(json));
     });
   }
 }

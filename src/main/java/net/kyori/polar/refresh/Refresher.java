@@ -25,17 +25,15 @@ package net.kyori.polar.refresh;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.kyori.event.EventBus;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
 import javax.inject.Inject;
+import net.kyori.event.EventBus;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract class Refresher<T, C extends RefreshContext<T>> {
   private final List<Entry<?>> entries = new ArrayList<>();

@@ -24,12 +24,11 @@
 package net.kyori.polar.http;
 
 import com.google.gson.JsonElement;
+import java.util.concurrent.CompletableFuture;
+import net.kyori.mu.Maybe;
 import net.kyori.polar.http.endpoint.EndpointRequest;
 import okhttp3.MediaType;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public interface HttpClient {
   // Flags
@@ -37,9 +36,9 @@ public interface HttpClient {
   // Media Types
   MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
 
-  default @NonNull CompletableFuture<Optional<JsonElement>> json(final @NonNull EndpointRequest request) {
+  default @NonNull CompletableFuture<Maybe<JsonElement>> json(final @NonNull EndpointRequest request) {
     return this.json(request, 0);
   }
 
-  @NonNull CompletableFuture<Optional<JsonElement>> json(final @NonNull EndpointRequest request, final int flags);
+  @NonNull CompletableFuture<Maybe<JsonElement>> json(final @NonNull EndpointRequest request, final int flags);
 }

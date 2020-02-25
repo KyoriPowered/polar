@@ -25,20 +25,18 @@ package net.kyori.polar.channel;
 
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import java.util.concurrent.CompletableFuture;
+import javax.inject.Inject;
 import net.kyori.kassel.channel.PrivateChannel;
 import net.kyori.kassel.channel.TextChannel;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import javax.inject.Inject;
 
 public class PrivateChannelImpl extends SnowflakedImpl implements PrivateChannel {
   private static final int MAX_CACHED_MESSAGES = 20;
@@ -61,7 +59,7 @@ public class PrivateChannelImpl extends SnowflakedImpl implements PrivateChannel
   }
 
   @Override
-  public @NonNull Optional<Message> message(final @Snowflake long id) {
+  public @NonNull Maybe<Message> message(final @Snowflake long id) {
     return this.textChannel.message(id);
   }
 

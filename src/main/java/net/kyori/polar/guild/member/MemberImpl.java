@@ -29,10 +29,15 @@ import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.inject.Inject;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.member.Member;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.user.User;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.http.endpoint.Endpoints;
@@ -42,13 +47,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.inject.Inject;
 
 public final class MemberImpl implements Member, Refreshable {
   final RolesImpl roles = new RolesImpl();
@@ -94,8 +92,8 @@ public final class MemberImpl implements Member, Refreshable {
   }
 
   @Override
-  public @NonNull Optional<String> nick() {
-    return Optional.ofNullable(this.nick);
+  public @NonNull Maybe<String> nick() {
+    return Maybe.maybe(this.nick);
   }
 
   @Override
@@ -107,8 +105,8 @@ public final class MemberImpl implements Member, Refreshable {
     this.roles.set(roles);
   }
 
-  void nick(final @NonNull Optional<String> nick) {
-    this.nick = nick.orElse(null);
+  void nick(final @NonNull Maybe<String> nick) {
+    this.nick = nick.orDefault(null);
   }
 
   @Override
@@ -137,8 +135,8 @@ public final class MemberImpl implements Member, Refreshable {
     public @NonNull Stream<Role> all() {
       return this.roles.stream()
         .map(MemberImpl.this.guild::role)
-        .filter(Optional::isPresent)
-        .map(Optional::get);
+        .filter(Maybe::isJust)
+        .map(Maybe::orThrow);
     }
 
     @Override

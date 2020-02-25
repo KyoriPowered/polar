@@ -24,17 +24,16 @@
 package net.kyori.polar;
 
 import net.kyori.kassel.client.Client;
+import net.kyori.mu.Maybe;
 import net.kyori.polar.client.ClientImpl;
-
-import java.util.Optional;
 
 public interface Polar {
   String API_URL = "https://discordapp.com/api/v" + Polar.API_VERSION; // dumb forward references
   String API_USER_AGENT = String.format(
     "DiscordBot (%s, kassel@%s polar@%s)",
     "https://github.com/KyoriPowered/polar",
-    Optional.ofNullable(Client.class.getPackage().getImplementationVersion()).orElse("dev"),
-    Optional.ofNullable(ClientImpl.class.getPackage().getImplementationVersion()).orElse("dev")
+    Maybe.maybe(Client.class.getPackage().getImplementationVersion()).orDefault("dev"),
+    Maybe.maybe(ClientImpl.class.getPackage().getImplementationVersion()).orDefault("dev")
   );
   int API_VERSION = 6;
 

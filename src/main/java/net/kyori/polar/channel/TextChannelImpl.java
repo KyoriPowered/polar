@@ -28,10 +28,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import javax.inject.Inject;
 import net.kyori.kassel.channel.TextChannel;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.mu.Maybe;
 import net.kyori.polar.ForPolar;
 import net.kyori.polar.channel.message.MessageImpl;
 import net.kyori.polar.http.HttpClient;
@@ -41,12 +45,6 @@ import net.kyori.polar.util.BoundedLong2ObjectLinkedOpenHashMap;
 import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-
-import javax.inject.Inject;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -74,16 +72,16 @@ public class TextChannelImpl implements TextChannel {
   }
 
   @Override
-  public @NonNull Optional<Message> message(final @Snowflake long id) {
-    return Optional.ofNullable(this.messages.get(id));
+  public @NonNull Maybe<Message> message(final @Snowflake long id) {
+    return Maybe.maybe(this.messages.get(id));
   }
 
   public void putMessage(final @Snowflake long id, final Message message) {
     this.messages.put(id, message);
   }
 
-  public @NonNull Optional<Message> removeMessage(final @Snowflake long id) {
-    return Optional.ofNullable(this.messages.remove(id));
+  public @NonNull Maybe<Message> removeMessage(final @Snowflake long id) {
+    return Maybe.maybe(this.messages.remove(id));
   }
 
   @Override
@@ -107,7 +105,7 @@ public class TextChannelImpl implements TextChannel {
           future.completeExceptionally(throwable);
         } else {
           element.map(JsonElement::getAsJsonObject)
-            .ifPresent(object -> future.complete(TextChannelImpl.this.messageFactory.create(TextChannelImpl.this.channel, object)));
+            .ifJust(object -> future.complete(TextChannelImpl.this.messageFactory.create(TextChannelImpl.this.channel, object)));
         }
       }));
     return future;

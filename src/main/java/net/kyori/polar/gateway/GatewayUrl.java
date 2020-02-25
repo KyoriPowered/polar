@@ -25,14 +25,13 @@ package net.kyori.polar.gateway;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import javax.inject.Inject;
 import net.kyori.mu.function.ThrowingSupplier;
 import net.kyori.polar.Polar;
 import net.kyori.polar.http.HttpClient;
 import net.kyori.polar.http.ImmediateHttpClient;
 import net.kyori.polar.http.endpoint.Endpoints;
 import net.kyori.violet.Lazy;
-
-import javax.inject.Inject;
 
 final class GatewayUrl extends Lazy<String> {
   @Inject
@@ -42,7 +41,7 @@ final class GatewayUrl extends Lazy<String> {
         .map(JsonElement::getAsJsonObject)
         .map(o -> o.getAsJsonPrimitive("url"))
         .map(JsonPrimitive::getAsString)
-        .orElseThrow(() -> new IllegalStateException("Could not fetch gateway url"));
+        .orThrow(() -> new IllegalStateException("Could not fetch gateway url"));
       return url + String.format("?compress=%s&encoding=%s&v=%d", Polar.GATEWAY_COMPRESSION, Polar.GATEWAY_ENCODING, Polar.GATEWAY_VERSION);
     }));
   }

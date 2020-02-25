@@ -24,20 +24,18 @@
 package net.kyori.polar.http;
 
 import com.google.gson.JsonElement;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.kyori.mu.Composer;
+import net.kyori.mu.Maybe;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.http.endpoint.EndpointRequest;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 @Singleton
 final class ImmediateHttpClientImpl extends AbstractHttpClient implements ImmediateHttpClient {
@@ -47,7 +45,7 @@ final class ImmediateHttpClientImpl extends AbstractHttpClient implements Immedi
   }
 
   @Override
-  public @NonNull CompletableFuture<Optional<JsonElement>> json(final @NonNull EndpointRequest request, final int flags) {
+  public @NonNull CompletableFuture<Maybe<JsonElement>> json(final @NonNull EndpointRequest request, final int flags) {
     final CompletableFuture<Response> future = new CompletableFuture<>();
     this.request(request, future, flags);
     return this.json(future);

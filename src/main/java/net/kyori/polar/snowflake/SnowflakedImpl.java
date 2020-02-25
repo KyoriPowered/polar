@@ -24,10 +24,9 @@
 package net.kyori.polar.snowflake;
 
 import com.google.common.base.MoreObjects;
+import java.util.Objects;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.kassel.snowflake.Snowflaked;
-
-import java.util.Objects;
 import net.kyori.polar.util.Equality;
 
 public class SnowflakedImpl implements Snowflaked {

@@ -27,14 +27,13 @@ import com.google.common.base.MoreObjects;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import javax.inject.Inject;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.GuildVoiceChannel;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import javax.inject.Inject;
 
 public final class GuildVoiceChannelImpl extends SnowflakedImpl implements GuildVoiceChannel, Refreshable {
   private final GuildVoiceChannelRefresher refresher;

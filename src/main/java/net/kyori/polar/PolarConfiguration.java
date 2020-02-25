@@ -23,6 +23,8 @@
  */
 package net.kyori.polar;
 
+import java.util.Set;
+import net.kyori.polar.gateway.GatewayIntent;
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -44,5 +46,9 @@ public interface PolarConfiguration {
    */
   default @NonNegative int shards() {
     return 1;
+  }
+
+  default @NonNull Set<GatewayIntent> intents() {
+    return GatewayIntent.defaults();
   }
 }

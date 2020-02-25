@@ -27,29 +27,27 @@ import com.google.common.collect.Sets;
 import com.google.gson.JsonElement;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.inject.Singleton;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.member.Member;
 import net.kyori.kassel.guild.member.event.GuildMemberNickChangeEvent;
 import net.kyori.kassel.guild.member.event.GuildMemberRoleAddEvent;
 import net.kyori.kassel.guild.member.event.GuildMemberRoleRemoveEvent;
 import net.kyori.kassel.guild.role.Role;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import javax.inject.Singleton;
-
 @Singleton
 final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Context> {
   @Override
   protected void register() {
-    this.field(MemberImpl::nick, json -> Optional.ofNullable(Json.getString(json, "nick", null)), MemberImpl::nick, (context, oldNick, newNick) -> new GuildMemberNickChangeEvent() {
+    this.field(MemberImpl::nick, json -> Maybe.maybe(Json.getString(json, "nick", null)), MemberImpl::nick, (context, oldNick, newNick) -> new GuildMemberNickChangeEvent() {
       @Override
       public @NonNull Guild guild() {
         return context.guild();
@@ -61,12 +59,12 @@ final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Contex
       }
 
       @Override
-      public @NonNull Optional<String> oldNick() {
+      public @NonNull Maybe<String> oldNick() {
         return oldNick;
       }
 
       @Override
-      public @NonNull Optional<String> newNick() {
+      public @NonNull Maybe<String> newNick() {
         return newNick;
       }
     });
@@ -81,13 +79,13 @@ final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Contex
       final Member member = context.target();
       final Set<Role> oldRoles = Arrays.stream(oldValue.toLongArray())
         .mapToObj(guild::role)
-        .filter(Optional::isPresent)
-        .map(Optional::get)
+        .filter(Maybe::isJust)
+        .map(Maybe::orThrow)
         .collect(Collectors.toSet());
       final Set<Role> newRoles = Arrays.stream(newValue.toLongArray())
         .mapToObj(guild::role)
-        .filter(Optional::isPresent)
-        .map(Optional::get)
+        .filter(Maybe::isJust)
+        .map(Maybe::orThrow)
         .collect(Collectors.toSet());
       Sets.difference(newRoles, oldRoles).forEach(role -> MemberRefresher.this.bus.post(new GuildMemberRoleAddEvent() {
         @Override

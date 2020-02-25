@@ -27,22 +27,20 @@ import com.google.common.base.MoreObjects;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import java.util.concurrent.CompletableFuture;
+import javax.inject.Inject;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.GuildTextChannel;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.channel.TextChannelImpl;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import javax.inject.Inject;
 
 public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildTextChannel, Refreshable {
   private static final int MAX_CACHED_MESSAGES = 20;
@@ -92,12 +90,12 @@ public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildT
   }
 
   @Override
-  public @NonNull Optional<String> topic() {
-    return Optional.ofNullable(this.topic);
+  public @NonNull Maybe<String> topic() {
+    return Maybe.maybe(this.topic);
   }
 
   @Override
-  public @NonNull Optional<Message> message(final @Snowflake long id) {
+  public @NonNull Maybe<Message> message(final @Snowflake long id) {
     return this.textChannel.message(id);
   }
 
@@ -105,7 +103,7 @@ public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildT
     this.textChannel.putMessage(id, message);
   }
 
-  public @NonNull Optional<Message> removeMessage(final @Snowflake long id) {
+  public @NonNull Maybe<Message> removeMessage(final @Snowflake long id) {
     return this.textChannel.removeMessage(id);
   }
 

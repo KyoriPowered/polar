@@ -24,6 +24,9 @@
 package net.kyori.polar.channel.message;
 
 import com.google.gson.JsonElement;
+import java.util.ArrayList;
+import java.util.List;
+import javax.inject.Singleton;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
@@ -34,11 +37,6 @@ import net.kyori.polar.channel.message.embed.EmbedImpl;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.inject.Singleton;
 
 @Singleton
 final class MessageRefresher extends Refresher<MessageImpl, MessageRefresher.Context> {

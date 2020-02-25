@@ -24,12 +24,11 @@
 package net.kyori.polar.channel.message.emoji;
 
 import com.google.gson.JsonObject;
+import java.util.Objects;
 import net.kyori.kassel.channel.message.emoji.UnicodeEmoji;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.util.Equality;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.util.Objects;
 
 public final class UnicodeEmojiImpl implements UnicodeEmoji {
   private final String name;

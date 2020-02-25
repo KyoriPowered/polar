@@ -36,8 +36,24 @@ import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
 import com.neovisionaries.ws.client.WebSocketFrame;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterOutputStream;
+import javax.inject.Inject;
+import javax.net.ssl.SSLContext;
 import net.kyori.event.EventBus;
 import net.kyori.kassel.Connectable;
 import net.kyori.kassel.channel.Channel;
@@ -67,7 +83,6 @@ import net.kyori.kassel.snowflake.Snowflaked;
 import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
 import net.kyori.mu.Composer;
-import net.kyori.mu.Optionals;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.ChannelTypes;
@@ -86,26 +101,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.Inflater;
-import java.util.zip.InflaterOutputStream;
-
-import javax.inject.Inject;
-import javax.net.ssl.SSLContext;
 
 public final class Gateway extends WebSocketAdapter implements Connectable {
   private static final Logger LOGGER = LoggerFactory.getLogger(Gateway.class);
@@ -136,7 +131,6 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private State state;
   private @Nullable String sessionId;
   private long lastSequence = -1;
-  private final Int2ObjectMap<Instant> lastMessage = new Int2ObjectOpenHashMap<>();
 
   @Inject
   private Gateway(final PolarConfiguration configuration, final ScheduledExecutorService scheduler, final EventBus<Object> bus, final Client client, final @Assisted Shard shard, final GatewayUrl url, final GuildImpl.Factory guildFactory, final MessageImpl.Factory messageFactory) {
@@ -153,7 +147,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-      .add("lastMessage", this.lastMessage)
+      .add("intents", GatewayIntent.flags(this.configuration.intents()))
       .add("lastSequence", this.lastSequence)
       .add("state", this.state)
       .toString();
@@ -161,7 +155,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   @Override
   public void connect() {
-    LOGGER.info("Connecting shard {} to gateway...", this.shard.id());
+    LOGGER.info("Connecting shard {} to gateway ({})...", this.shard.id(), this);
     this.state = State.CONNECTING;
     final WebSocketFactory factory = new WebSocketFactory();
     try {
@@ -312,7 +306,6 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private void onMessage(final WebSocket ws, final JsonObject json) {
     final int opcode = Json.needInt(json, GatewayPayload.OPCODE);
-    this.lastMessage.put(opcode, Instant.now());
     switch(opcode) {
       case GatewayOpcode.DISPATCH: this.dispatch(ws, json); break;
       case GatewayOpcode.HEARTBEAT: this.heartbeat(ws); break;
@@ -375,9 +368,9 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       case ChannelTypes.GUILD_CATEGORY:
       case ChannelTypes.GUILD_TEXT:
       case ChannelTypes.GUILD_VOICE:
-        Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-          .ifPresent(guild -> guild.putChannel(Json.needLong(json, "id"), json)
-            .ifPresent(channel -> this.bus.post(new GuildChannelCreateEvent() {
+        this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+          .ifJust(guild -> guild.putChannel(Json.needLong(json, "id"), json)
+            .ifJust(channel -> this.bus.post(new GuildChannelCreateEvent() {
               @Override
               public @NonNull Guild guild() {
                 return guild;
@@ -391,8 +384,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
         break;
       case ChannelTypes.DM:
         if(Channels.hasRecipient(json)) {
-          Optionals.cast(this.client.user(Channels.recipient(json)), UserImpl.class)
-            .ifPresent(user -> ((ClientImpl) this.client).privateChannel(user, Json.needLong(json, "id")));
+          this.client.user(Channels.recipient(json)).cast(UserImpl.class)
+            .ifJust(user -> ((ClientImpl) this.client).privateChannel(user, Json.needLong(json, "id")));
         }
         break;
       case ChannelTypes.GROUP_DM: /* NOOP */ break;
@@ -404,9 +397,9 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       case ChannelTypes.GUILD_CATEGORY:
       case ChannelTypes.GUILD_TEXT:
       case ChannelTypes.GUILD_VOICE:
-        Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-          .ifPresent(guild -> guild.removeChannel(Json.needLong(json, "id"))
-            .ifPresent(channel -> this.bus.post(new GuildChannelDeleteEvent() {
+        this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+          .ifJust(guild -> guild.removeChannel(Json.needLong(json, "id"))
+            .ifJust(channel -> this.bus.post(new GuildChannelDeleteEvent() {
               @Override
               public @NonNull Guild guild() {
                 return guild;
@@ -430,8 +423,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       case ChannelTypes.GUILD_VOICE:
         this.shard.guild(Json.needLong(json, "guild_id"))
           .map(guild -> guild.channel(Json.needLong(json, "id")))
-          .flatMap(channel -> Optionals.cast(channel, Refreshable.class))
-          .ifPresent(channel -> channel.refresh(json));
+          .flatMap(channel -> channel.cast(Refreshable.class))
+          .ifJust(channel -> channel.refresh(json));
         break;
       case ChannelTypes.DM: /* NOOP */ break;
       case ChannelTypes.GROUP_DM: /* NOOP */ break;
@@ -464,7 +457,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildDelete(final JsonObject json) {
-    this.shard.removeGuild(Json.needLong(json, "id")).ifPresent(guild -> this.bus.post(new GuildDeleteEvent() {
+    this.shard.removeGuild(Json.needLong(json, "id")).ifJust(guild -> this.bus.post(new GuildDeleteEvent() {
       @Override
       public @NonNull Guild guild() {
         return guild;
@@ -473,13 +466,13 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildEmojisUpdate(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-      .ifPresent(guild -> guild.refreshEmojis(json.getAsJsonArray("emojis")));
+    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+      .ifJust(guild -> guild.refreshEmojis(json.getAsJsonArray("emojis")));
   }
 
   private void dispatchGuildMemberAdd(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-      .ifPresent(guild -> {
+    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+      .ifJust(guild -> {
         final Member member = guild.putMember(json);
         this.bus.post(new GuildMemberAddEvent() {
           @Override
@@ -496,10 +489,10 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildMemberRemove(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-      .ifPresent(guild -> {
+    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+      .ifJust(guild -> {
         guild.removeMember(Json.needLong(json.getAsJsonObject("user"), "id"))
-          .ifPresent(member -> this.bus.post(new GuildMemberRemoveEvent() {
+          .ifJust(member -> this.bus.post(new GuildMemberRemoveEvent() {
             @Override
             public @NonNull Guild guild() {
               return guild;
@@ -516,13 +509,13 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchGuildMemberUpdate(final JsonObject json) {
     this.shard.guild(Json.needLong(json, "guild_id"))
       .map(guild -> guild.member(Json.needLong(json.getAsJsonObject("user"), "id")))
-      .flatMap(member -> Optionals.cast(member, Refreshable.class))
-      .ifPresent(member -> member.refresh(json));
+      .flatMap(member -> member.cast(Refreshable.class))
+      .ifJust(member -> member.refresh(json));
   }
 
   private void dispatchGuildMembersChunk(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-      .ifPresent(guild -> {
+    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+      .ifJust(guild -> {
         for(final JsonElement member : json.getAsJsonArray("members")) {
           guild.putMember(member.getAsJsonObject());
         }
@@ -530,8 +523,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildRoleCreate(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-      .ifPresent(guild -> {
+    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+      .ifJust(guild -> {
         final Role role = guild.putRole(json.getAsJsonObject("role"));
         this.bus.post(new GuildRoleCreateEvent() {
           @Override
@@ -548,8 +541,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildRoleDelete(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "guild_id")), GuildImpl.class)
-      .ifPresent(guild -> guild.removeRole(Json.needLong(json, "role_id")).ifPresent(role -> {
+    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+      .ifJust(guild -> guild.removeRole(Json.needLong(json, "role_id")).ifJust(role -> {
         this.bus.post(new GuildRoleDeleteEvent() {
           @Override
           public @NonNull Guild guild() {
@@ -566,22 +559,22 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private void dispatchGuildRoleUpdate(final JsonObject json) {
     this.shard.guild(Json.needLong(json, "guild_id"))
-      .ifPresent(guild -> {
+      .ifJust(guild -> {
         final JsonObject roleJson = json.getAsJsonObject("role");
-        Optionals.cast(guild.role(Json.needLong(roleJson, "id")), Refreshable.class).ifPresent(role -> role.refresh(roleJson));
+        guild.role(Json.needLong(roleJson, "id")).cast(Refreshable.class).ifJust(role -> role.refresh(roleJson));
       });
   }
 
   private void dispatchGuildUpdate(final JsonObject json) {
-    Optionals.cast(this.shard.guild(Json.needLong(json, "id")), Refreshable.class)
-      .ifPresent(guild -> guild.refresh(json));
+    this.shard.guild(Json.needLong(json, "id")).cast(Refreshable.class)
+      .ifJust(guild -> guild.refresh(json));
   }
 
   private void dispatchMessageCreate(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), GuildTextChannelImpl.class))
-        .ifPresent(channel -> {
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
+        .ifJust(channel -> {
           final Message message = this.messageFactory.create(channel, json);
           channel.putMessage(message.id(), message);
           this.bus.post(new ChannelMessageCreateEvent() {
@@ -604,10 +597,10 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchMessageDelete(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), GuildTextChannelImpl.class))
-        .ifPresent(channel -> {
-          final Snowflaked message = Optionals.cast(channel.removeMessage(Json.needLong(json, "id")), Snowflaked.class)
-            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "id")));
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
+        .ifJust(channel -> {
+          final Snowflaked message = channel.removeMessage(Json.needLong(json, "id")).cast(Snowflaked.class)
+            .orGet(() -> new SnowflakedImpl(Json.needLong(json, "id")));
           this.bus.post(new ChannelMessageDeleteEvent() {
             @Override
             public @NonNull Channel channel() {
@@ -628,11 +621,11 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchMessageDeleteBulk(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), GuildTextChannelImpl.class))
-        .ifPresent(channel -> {
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
+        .ifJust(channel -> {
           for(final JsonElement id : json.getAsJsonArray("ids")) {
-            final Snowflaked message = Optionals.cast(channel.removeMessage(Json.needLong(id, "id")), Snowflaked.class)
-              .orElseGet(() -> new SnowflakedImpl(Json.needLong(id, "id")));
+            final Snowflaked message = channel.removeMessage(Json.needLong(id, "id")).cast(Snowflaked.class)
+              .orGet(() -> new SnowflakedImpl(Json.needLong(id, "id")));
             this.bus.post(new ChannelMessageDeleteEvent() {
               @Override
               public @NonNull Channel channel() {
@@ -654,12 +647,12 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchMessageReactionAdd(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), GuildTextChannelImpl.class))
-        .ifPresent(channel -> {
-          final Snowflaked message = Optionals.cast(channel.message(Json.needLong(json, "message_id")), Snowflaked.class)
-            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
-          final Snowflaked user = Optionals.cast(this.client.user(Json.needLong(json, "user_id")), Snowflaked.class)
-            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
+        .ifJust(channel -> {
+          final Snowflaked message = channel.message(Json.needLong(json, "message_id")).cast(Snowflaked.class)
+            .orGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
+          final Snowflaked user = this.client.user(Json.needLong(json, "user_id")).cast(Snowflaked.class)
+            .orGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
           final Emoji emoji = Emojis.from(json.getAsJsonObject("emoji"));
           this.bus.post(new ChannelMessageReactionAddEvent() {
             @Override
@@ -691,12 +684,12 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchMessageReactionRemove(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), GuildTextChannelImpl.class))
-        .ifPresent(channel -> {
-          final Snowflaked message = Optionals.cast(channel.message(Json.needLong(json, "message_id")), Snowflaked.class)
-            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
-          final Snowflaked user = Optionals.cast(this.client.user(Json.needLong(json, "user_id")), Snowflaked.class)
-            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
+        .ifJust(channel -> {
+          final Snowflaked message = channel.message(Json.needLong(json, "message_id")).cast(Snowflaked.class)
+            .orGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
+          final Snowflaked user = this.client.user(Json.needLong(json, "user_id")).cast(Snowflaked.class)
+            .orGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
           final Emoji emoji = Emojis.from(json.getAsJsonObject("emoji"));
           this.bus.post(new ChannelMessageReactionRemoveEvent() {
             @Override
@@ -728,10 +721,10 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchMessageReactionRemoveAll(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), GuildTextChannelImpl.class))
-        .ifPresent(channel -> {
-          final Snowflaked message = Optionals.cast(channel.message(Json.needLong(json, "message_id")), Snowflaked.class)
-            .orElseGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
+        .ifJust(channel -> {
+          final Snowflaked message = channel.message(Json.needLong(json, "message_id")).cast(Snowflaked.class)
+            .orGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
           this.bus.post(new ChannelMessageReactionClearEvent() {
             @Override
             public @NonNull Channel channel() {
@@ -752,9 +745,9 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void dispatchMessageUpdate(final JsonObject json) {
     if(json.has("guild_id")) {
       this.shard.guild(Json.needLong(json, "guild_id"))
-        .flatMap(guild -> Optionals.cast(guild.channel(Json.needLong(json, "channel_id")), TextChannel.class))
-        .flatMap(channel -> Optionals.cast(channel.message(Json.needLong(json, "id")), Refreshable.class))
-        .ifPresent(message -> message.refresh(json));
+        .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(TextChannel.class))
+        .flatMap(channel -> channel.message(Json.needLong(json, "id")).cast(Refreshable.class))
+        .ifJust(message -> message.refresh(json));
     } else {
       LOGGER.warn("Encountered request to remove all reactions from non-guild message: {}", json);
     }
@@ -840,6 +833,11 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   private void identify(final WebSocket ws) {
     ws.sendText(GatewayPayload.create(GatewayOpcode.IDENTIFY, d -> {
       d.addProperty("compress", true);
+
+      final Set<GatewayIntent> intents = this.configuration.intents();
+      if(!intents.isEmpty()) {
+        d.addProperty("intents", GatewayIntent.flags(intents));
+      }
 
       final JsonObject properties = new JsonObject();
       properties.addProperty("$browser", "kassel");

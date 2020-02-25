@@ -27,18 +27,17 @@ import com.google.common.base.MoreObjects;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.kyori.kassel.channel.message.embed.Embed;
-import net.kyori.peppermint.Json;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.awt.Color;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import net.kyori.kassel.channel.message.embed.Embed;
+import net.kyori.mu.Maybe;
+import net.kyori.peppermint.Json;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class EmbedImpl implements Embed {
   final @Nullable String title;
@@ -124,43 +123,43 @@ public final class EmbedImpl implements Embed {
   }
 
   @Override
-  public @NonNull Optional<String> title() {
-    return Optional.ofNullable(this.title);
+  public @NonNull Maybe<String> title() {
+    return Maybe.maybe(this.title);
   }
 
   @Override
-  public @NonNull Optional<String> description() {
-    return Optional.ofNullable(this.description);
+  public @NonNull Maybe<String> description() {
+    return Maybe.maybe(this.description);
   }
 
   @Override
-  public @NonNull Optional<String> url() {
-    return Optional.ofNullable(this.url);
+  public @NonNull Maybe<String> url() {
+    return Maybe.maybe(this.url);
   }
 
   @Override
-  public @NonNull Optional<Color> color() {
-    return Optional.ofNullable(this.color);
+  public @NonNull Maybe<Color> color() {
+    return Maybe.maybe(this.color);
   }
 
   @Override
-  public @NonNull Optional<Instant> timestamp() {
-    return Optional.ofNullable(this.timestamp);
+  public @NonNull Maybe<Instant> timestamp() {
+    return Maybe.maybe(this.timestamp);
   }
 
   @Override
-  public @NonNull Optional<Author> author() {
-    return Optional.ofNullable(this.author);
+  public @NonNull Maybe<Author> author() {
+    return Maybe.maybe(this.author);
   }
 
   @Override
-  public @NonNull Optional<Image> image() {
-    return Optional.ofNullable(this.image);
+  public @NonNull Maybe<Image> image() {
+    return Maybe.maybe(this.image);
   }
 
   @Override
-  public @NonNull Optional<Thumbnail> thumbnail() {
-    return Optional.ofNullable(this.thumbnail);
+  public @NonNull Maybe<Thumbnail> thumbnail() {
+    return Maybe.maybe(this.thumbnail);
   }
 
   @NonNull
@@ -170,8 +169,8 @@ public final class EmbedImpl implements Embed {
   }
 
   @Override
-  public @NonNull Optional<Footer> footer() {
-    return Optional.ofNullable(this.footer);
+  public @NonNull Maybe<Footer> footer() {
+    return Maybe.maybe(this.footer);
   }
 
   @Override

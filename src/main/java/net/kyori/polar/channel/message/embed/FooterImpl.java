@@ -26,11 +26,10 @@ package net.kyori.polar.channel.message.embed;
 import com.google.common.base.MoreObjects;
 import com.google.gson.JsonObject;
 import net.kyori.kassel.channel.message.embed.Embed;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
 
 final class FooterImpl implements Embed.Footer {
   private final @Nullable String text;
@@ -49,14 +48,14 @@ final class FooterImpl implements Embed.Footer {
   }
 
   @Override
-  public @NonNull Optional<String> text() {
-    return Optional.ofNullable(this.text);
+  public @NonNull Maybe<String> text() {
+    return Maybe.maybe(this.text);
   }
 
   @Field(name = "icon_url")
   @Override
-  public @NonNull Optional<String> icon() {
-    return Optional.ofNullable(this.icon);
+  public @NonNull Maybe<String> icon() {
+    return Maybe.maybe(this.icon);
   }
 
   @Override

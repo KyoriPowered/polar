@@ -23,13 +23,12 @@
  */
 package net.kyori.polar.shard;
 
+import java.util.stream.Stream;
 import net.kyori.kassel.Connectable;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.mu.Maybe;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.util.Optional;
-import java.util.stream.Stream;
 
 /**
  * A shard.
@@ -55,7 +54,7 @@ public interface Shard extends Connectable, net.kyori.kassel.client.shard.Shard 
    * @param id the snowflake id
    * @return the guild
    */
-  @NonNull Optional<Guild> guild(final @Snowflake long id);
+  @NonNull Maybe<Guild> guild(final @Snowflake long id);
 
   /**
    * Puts a guild.
@@ -71,5 +70,5 @@ public interface Shard extends Connectable, net.kyori.kassel.client.shard.Shard 
    * @param id the snowflake id
    * @return the guild
    */
-  @NonNull Optional<Guild> removeGuild(final @Snowflake long id);
+  @NonNull Maybe<Guild> removeGuild(final @Snowflake long id);
 }

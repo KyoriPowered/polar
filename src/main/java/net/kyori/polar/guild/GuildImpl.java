@@ -32,12 +32,16 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.function.LongConsumer;
+import java.util.stream.Stream;
+import javax.inject.Inject;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.channel.message.emoji.CustomEmoji;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.member.Member;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.snowflake.Snowflake;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.channel.ChannelTypes;
 import net.kyori.polar.channel.message.emoji.CustomEmojiImpl;
@@ -46,12 +50,6 @@ import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
-import java.util.function.LongConsumer;
-import java.util.stream.Stream;
-
-import javax.inject.Inject;
 
 public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshable {
   private final Long2ObjectMap<Channel> channels = new Long2ObjectOpenHashMap<>();
@@ -140,11 +138,11 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
   }
 
   @Override
-  public @NonNull Optional<Channel> channel(final @Snowflake long id) {
-    return Optional.ofNullable(this.channels.get(id));
+  public @NonNull Maybe<Channel> channel(final @Snowflake long id) {
+    return Maybe.maybe(this.channels.get(id));
   }
 
-  public @NonNull Optional<Channel> putChannel(final @Snowflake long id, final JsonObject json) {
+  public @NonNull Maybe<Channel> putChannel(final @Snowflake long id, final JsonObject json) {
     final @Nullable Channel channel;
     switch(Json.needInt(json, "type")) {
       case ChannelTypes.GUILD_CATEGORY: channel = this.factories.channelCategory(this, json); break;
@@ -152,8 +150,8 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
       case ChannelTypes.GUILD_VOICE: channel = this.factories.voiceChannel(this, json); break;
       case ChannelTypes.DM: throw new UnsupportedOperationException("dm");
       case ChannelTypes.GROUP_DM: throw new UnsupportedOperationException("group_dm");
-      case ChannelTypes.GUILD_NEWS: return Optional.empty();
-      case ChannelTypes.GUILD_STORE: return Optional.empty(); // bots cannot read or send from a store channel type (it is just a store page)
+      case ChannelTypes.GUILD_NEWS: return Maybe.nothing();
+      case ChannelTypes.GUILD_STORE: return Maybe.nothing(); // bots cannot read or send from a store channel type (it is just a store page)
       default: throw new IllegalArgumentException(String.valueOf(Json.needInt(json, "type")));
     }
 
@@ -161,11 +159,11 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
       this.channels.put(id, channel);
     }
 
-    return Optional.ofNullable(channel);
+    return Maybe.maybe(channel);
   }
 
-  public @NonNull Optional<Channel> removeChannel(final @Snowflake long id) {
-    return Optional.ofNullable(this.channels.remove(id));
+  public @NonNull Maybe<Channel> removeChannel(final @Snowflake long id) {
+    return Maybe.maybe(this.channels.remove(id));
   }
 
   @Override
@@ -174,8 +172,8 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
   }
 
   @Override
-  public @NonNull Optional<CustomEmoji> emoji(final @Snowflake long id) {
-    return Optional.ofNullable(this.emojis.get(id));
+  public @NonNull Maybe<CustomEmoji> emoji(final @Snowflake long id) {
+    return Maybe.maybe(this.emojis.get(id));
   }
 
   private void putEmoji(final @Snowflake long id, final JsonObject json) {
@@ -193,8 +191,8 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
   }
 
   @Override
-  public @NonNull Optional<Member> member(final @Snowflake long id) {
-    return Optional.ofNullable(this.members.get(id));
+  public @NonNull Maybe<Member> member(final @Snowflake long id) {
+    return Maybe.maybe(this.members.get(id));
   }
 
   public boolean requiresMemberChunking(final int expected) {
@@ -212,13 +210,13 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
     return member;
   }
 
-  public @NonNull Optional<Member> removeMember(final @Snowflake long id) {
-    return Optional.ofNullable(this.members.remove(id));
+  public @NonNull Maybe<Member> removeMember(final @Snowflake long id) {
+    return Maybe.maybe(this.members.remove(id));
   }
 
   @Override
-  public @NonNull Optional<Role> role(final @Snowflake long id) {
-    return Optional.ofNullable(this.roles.get(id));
+  public @NonNull Maybe<Role> role(final @Snowflake long id) {
+    return Maybe.maybe(this.roles.get(id));
   }
 
   public @NonNull Role putRole(final JsonObject json) {
@@ -227,8 +225,8 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
     return role;
   }
 
-  public @NonNull Optional<Role> removeRole(final @Snowflake long id) {
-    return Optional.ofNullable(this.roles.remove(id));
+  public @NonNull Maybe<Role> removeRole(final @Snowflake long id) {
+    return Maybe.maybe(this.roles.remove(id));
   }
 
   @Override

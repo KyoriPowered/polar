@@ -23,11 +23,17 @@
  */
 package net.kyori.polar.client;
 
-import com.google.common.collect.MoreCollectors;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.stream.Stream;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.kyori.kassel.Connectable;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.channel.PrivateChannel;
@@ -38,6 +44,7 @@ import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
 import net.kyori.kassel.user.User;
 import net.kyori.mu.Composer;
+import net.kyori.mu.Maybe;
 import net.kyori.mu.function.ThrowingConsumer;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
@@ -54,16 +61,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.stream.Stream;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 @Singleton
 public final class ClientImpl implements Client {
@@ -117,17 +114,17 @@ public final class ClientImpl implements Client {
   }
 
   @Override
-  public @NonNull Optional<Guild> guild(final @Snowflake long id) {
+  public @NonNull Maybe<Guild> guild(final @Snowflake long id) {
     return this.shards.stream()
       .map(shard -> shard.guild(id))
-      .filter(Optional::isPresent)
-      .map(Optional::get)
-      .collect(MoreCollectors.toOptional());
+      .filter(Maybe::isJust)
+      .map(Maybe::orThrow)
+      .collect(Maybe.collector());
   }
 
   @Override
-  public @NonNull Optional<User> user(final @Snowflake long id) {
-    return Optional.ofNullable(this.users.get(id));
+  public @NonNull Maybe<User> user(final @Snowflake long id) {
+    return Maybe.maybe(this.users.get(id));
   }
 
   @Override
@@ -156,15 +153,16 @@ public final class ClientImpl implements Client {
   }
 
   public @NonNull User userOrCreate(final JsonObject json) {
-    return this.user(Json.needLong(json, "id")).orElseGet(() -> {
+    final @Snowflake long id = Json.needLong(json, "id");
+    return this.user(id).orGet(() -> {
       final User user = this.userFactory.create(json);
-      this.users.put(Json.needLong(json, "id"), user);
+      this.users.put(id, user);
       return user;
     });
   }
 
-  public Optional<Channel> channel(final @Snowflake long id) {
-    return Optional.ofNullable(this.channels.get(id));
+  public Maybe<Channel> channel(final @Snowflake long id) {
+    return Maybe.maybe(this.channels.get(id));
   }
 
   public CompletableFuture<PrivateChannel> requestPrivateChannel(final UserImpl user) {
@@ -177,7 +175,7 @@ public final class ClientImpl implements Client {
             future.completeExceptionally(throwable);
           } else {
             element.map(JsonElement::getAsJsonObject)
-              .ifPresent(object -> {
+              .ifJust(object -> {
                 final @Snowflake long id = Channels.recipient(object);
                 future.complete(this.privateChannel(user, id));
               });

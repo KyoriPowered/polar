@@ -23,9 +23,8 @@
  */
 package net.kyori.polar.http.endpoint;
 
-import okhttp3.Request;
-
 import java.util.function.Consumer;
+import okhttp3.Request;
 
 public interface Endpoint {
   Consumer<Request.Builder> EMPTY = builder -> {

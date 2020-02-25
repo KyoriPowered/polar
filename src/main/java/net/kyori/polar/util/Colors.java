@@ -23,9 +23,8 @@
  */
 package net.kyori.polar.util;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.awt.Color;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface Colors {
   int NOT_SET = 0;

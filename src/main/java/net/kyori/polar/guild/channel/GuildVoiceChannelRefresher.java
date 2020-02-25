@@ -23,6 +23,7 @@
  */
 package net.kyori.polar.guild.channel;
 
+import javax.inject.Singleton;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.event.GuildChannelNameChangeEvent;
@@ -30,8 +31,6 @@ import net.kyori.peppermint.Json;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import javax.inject.Singleton;
 
 @Singleton
 final class GuildVoiceChannelRefresher extends Refresher<GuildVoiceChannelImpl, GuildVoiceChannelRefresher.Context> {

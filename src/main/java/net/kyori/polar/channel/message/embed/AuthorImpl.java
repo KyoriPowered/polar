@@ -26,11 +26,10 @@ package net.kyori.polar.channel.message.embed;
 import com.google.common.base.MoreObjects;
 import com.google.gson.JsonObject;
 import net.kyori.kassel.channel.message.embed.Embed;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
 
 final class AuthorImpl implements Embed.Author {
   private final @Nullable String name;
@@ -52,19 +51,19 @@ final class AuthorImpl implements Embed.Author {
   }
 
   @Override
-  public @NonNull Optional<String> name() {
-    return Optional.ofNullable(this.name);
+  public @NonNull Maybe<String> name() {
+    return Maybe.maybe(this.name);
   }
 
   @Override
-  public @NonNull Optional<String> url() {
-    return Optional.ofNullable(this.url);
+  public @NonNull Maybe<String> url() {
+    return Maybe.maybe(this.url);
   }
 
   @Field(name = "icon_url")
   @Override
-  public @NonNull Optional<String> icon() {
-    return Optional.ofNullable(this.icon);
+  public @NonNull Maybe<String> icon() {
+    return Maybe.maybe(this.icon);
   }
 
   @Override

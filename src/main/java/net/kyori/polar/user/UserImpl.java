@@ -27,19 +27,17 @@ import com.google.common.base.MoreObjects;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import java.util.concurrent.CompletableFuture;
+import javax.inject.Inject;
 import net.kyori.kassel.channel.PrivateChannel;
 import net.kyori.kassel.user.User;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.client.ClientImpl;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import javax.inject.Inject;
 
 public final class UserImpl extends SnowflakedImpl implements Refreshable, User {
   private final UserRefresher refresher;
@@ -85,12 +83,12 @@ public final class UserImpl extends SnowflakedImpl implements Refreshable, User 
   }
 
   @Override
-  public @NonNull Optional<String> avatar() {
-    return Optional.ofNullable(this.avatar);
+  public @NonNull Maybe<String> avatar() {
+    return Maybe.maybe(this.avatar);
   }
 
-  void avatar(final @NonNull Optional<String> avatar) {
-    this.avatar = avatar.orElse(null);
+  void avatar(final @NonNull Maybe<String> avatar) {
+    this.avatar = avatar.orDefault(null);
   }
 
   @Override

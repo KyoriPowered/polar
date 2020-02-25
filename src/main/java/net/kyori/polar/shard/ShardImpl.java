@@ -27,20 +27,18 @@ import com.google.common.base.MoreObjects;
 import com.google.inject.assistedinject.Assisted;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import java.util.stream.Stream;
+import javax.inject.Inject;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.snowflake.Snowflake;
 import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
+import net.kyori.mu.Maybe;
 import net.kyori.polar.gateway.Gateway;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
-import java.util.stream.Stream;
-
-import javax.inject.Inject;
 
 public final class ShardImpl implements Shard {
   private static final Logger LOGGER = LoggerFactory.getLogger(ShardImpl.class);
@@ -65,8 +63,8 @@ public final class ShardImpl implements Shard {
   }
 
   @Override
-  public @NonNull Optional<Guild> guild(final @Snowflake long id) {
-    return Optional.ofNullable(this.guilds.get(id));
+  public @NonNull Maybe<Guild> guild(final @Snowflake long id) {
+    return Maybe.maybe(this.guilds.get(id));
   }
 
   @Override
@@ -75,8 +73,8 @@ public final class ShardImpl implements Shard {
   }
 
   @Override
-  public @NonNull Optional<Guild> removeGuild(final @Snowflake long id) {
-    return Optional.ofNullable(this.guilds.remove(id));
+  public @NonNull Maybe<Guild> removeGuild(final @Snowflake long id) {
+    return Maybe.maybe(this.guilds.remove(id));
   }
 
   @Override

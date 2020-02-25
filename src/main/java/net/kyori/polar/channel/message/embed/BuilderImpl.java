@@ -23,15 +23,14 @@
  */
 package net.kyori.polar.channel.message.embed;
 
-import net.kyori.kassel.channel.message.embed.Embed;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.awt.Color;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import net.kyori.kassel.channel.message.embed.Embed;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -66,31 +65,31 @@ final class BuilderImpl implements Embed.Builder {
     this.url = embed.url;
     this.color = embed.color;
     this.timestamp = embed.timestamp;
-    this.authorName = embed.author != null ? embed.author.name().orElse(null) : null;
-    this.authorUrl = embed.author != null ? embed.author.url().orElse(null) : null;
-    this.authorIcon = embed.author != null ? embed.author.icon().orElse(null) : null;
-    this.imageUrl = embed.image != null ? embed.image.url().orElse(null) : null;
-    this.thumbnailUrl = embed.thumbnail != null ? embed.thumbnail.url().orElse(null) : null;
+    this.authorName = embed.author != null ? embed.author.name().orDefault(null) : null;
+    this.authorUrl = embed.author != null ? embed.author.url().orDefault(null) : null;
+    this.authorIcon = embed.author != null ? embed.author.icon().orDefault(null) : null;
+    this.imageUrl = embed.image != null ? embed.image.url().orDefault(null) : null;
+    this.thumbnailUrl = embed.thumbnail != null ? embed.thumbnail.url().orDefault(null) : null;
     this.fields.addAll(embed.fields.stream()
       .map(field -> new FieldImpl(
         field.name(),
         field.value(),
         field.inline()
       )).collect(Collectors.toList()));
-    this.footerText = embed.footer != null ? embed.footer.text().orElse(null) : null;
-    this.footerIcon = embed.footer != null ? embed.footer.icon().orElse(null) : null;
+    this.footerText = embed.footer != null ? embed.footer.text().orDefault(null) : null;
+    this.footerIcon = embed.footer != null ? embed.footer.icon().orDefault(null) : null;
   }
 
   @Override
   public Embed.@NonNull Builder title(final @Nullable String title) {
-    checkArgument(title.length() <= Embed.MAX_TITLE_LENGTH, "title.length() > %s", Embed.MAX_TITLE_LENGTH);
+    if(title != null) checkArgument(title.length() <= Embed.MAX_TITLE_LENGTH, "title.length() > %s", Embed.MAX_TITLE_LENGTH);
     this.title = title;
     return this;
   }
 
   @Override
   public Embed.@NonNull Builder description(final @Nullable String description) {
-    checkArgument(description.length() <= Embed.MAX_DESCRIPTION_LENGTH, "description.length() > %s", Embed.MAX_DESCRIPTION_LENGTH);
+    if(description != null) checkArgument(description.length() <= Embed.MAX_DESCRIPTION_LENGTH, "description.length() > %s", Embed.MAX_DESCRIPTION_LENGTH);
     this.description = description;
     return this;
   }
@@ -156,7 +155,7 @@ final class BuilderImpl implements Embed.Builder {
 
   @Override
   public Embed.@NonNull Builder footerText(final @Nullable String text) {
-    checkArgument(text.length() <= Embed.Footer.MAX_TEXT_LENGTH, "text.length() > %s", Embed.Footer.MAX_TEXT_LENGTH);
+    if(text != null) checkArgument(text.length() <= Embed.Footer.MAX_TEXT_LENGTH, "text.length() > %s", Embed.Footer.MAX_TEXT_LENGTH);
     this.footerText = text;
     return this;
   }

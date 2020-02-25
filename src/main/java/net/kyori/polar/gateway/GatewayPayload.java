@@ -25,7 +25,6 @@ package net.kyori.polar.gateway;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 

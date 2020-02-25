@@ -26,11 +26,10 @@ package net.kyori.polar.http.endpoint;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
-import okhttp3.Request;
-
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import okhttp3.Request;
 
 final class ParameterizedEndpoint {
   private static final Pattern PATTERN = Pattern.compile("\\{(.*?)\\}");

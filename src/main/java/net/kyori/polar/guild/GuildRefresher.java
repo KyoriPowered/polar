@@ -23,14 +23,13 @@
  */
 package net.kyori.polar.guild;
 
+import javax.inject.Singleton;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.event.GuildNameChangeEvent;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import javax.inject.Singleton;
 
 @Singleton
 final class GuildRefresher extends Refresher<GuildImpl, RefreshContext<GuildImpl>> {

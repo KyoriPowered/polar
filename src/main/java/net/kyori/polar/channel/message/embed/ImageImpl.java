@@ -26,11 +26,10 @@ package net.kyori.polar.channel.message.embed;
 import com.google.common.base.MoreObjects;
 import com.google.gson.JsonObject;
 import net.kyori.kassel.channel.message.embed.Embed;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Optional;
 
 final class ImageImpl implements Embed.Image {
   private final @Nullable String url;
@@ -44,8 +43,8 @@ final class ImageImpl implements Embed.Image {
   }
 
   @Override
-  public @NonNull Optional<String> url() {
-    return Optional.ofNullable(this.url);
+  public @NonNull Maybe<String> url() {
+    return Maybe.maybe(this.url);
   }
 
   @Override

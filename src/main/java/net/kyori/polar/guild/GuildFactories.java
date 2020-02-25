@@ -24,6 +24,8 @@
 package net.kyori.polar.guild;
 
 import com.google.gson.JsonObject;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.kyori.kassel.channel.ChannelCategory;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.channel.GuildTextChannel;
@@ -36,9 +38,6 @@ import net.kyori.polar.guild.channel.GuildVoiceChannelImpl;
 import net.kyori.polar.guild.member.MemberImpl;
 import net.kyori.polar.guild.role.RoleImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 public interface GuildFactories {
   @NonNull ChannelCategory channelCategory(final @NonNull Guild guild, final @NonNull JsonObject json);

@@ -28,7 +28,20 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonElement;
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.kyori.mu.Composer;
+import net.kyori.mu.Maybe;
 import net.kyori.mu.function.ThrowingFunction;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.http.endpoint.EndpointRequest;
@@ -40,21 +53,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 @Singleton
 final class RateLimitedHttpClientImpl extends AbstractHttpClient implements RateLimitedHttpClient {
@@ -77,7 +75,7 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
   }
 
   @Override
-  public @NonNull CompletableFuture<Optional<JsonElement>> json(final @NonNull EndpointRequest request, final int flags) {
+  public @NonNull CompletableFuture<Maybe<JsonElement>> json(final @NonNull EndpointRequest request, final int flags) {
     final CompletableFuture<Response> future = new CompletableFuture<>();
     final Bucket bucket = this.buckets.getUnchecked(request.identity());
     bucket.submit(this.request(Composer.accept(new Request.Builder(), request::configure), flags), future);
@@ -162,7 +160,7 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
     }
 
     private int retryAfter(final @Nullable ResponseBody response) {
-      return Optional.ofNullable(response)
+      return Maybe.maybe(response)
         .map(ThrowingFunction.of(body -> {
           final String string = body.string();
           body.close();
@@ -171,7 +169,7 @@ final class RateLimitedHttpClientImpl extends AbstractHttpClient implements Rate
         .map(ThrowingFunction.of(PARSER::parse))
         .map(JsonElement::getAsJsonObject)
         .map(json -> json.getAsJsonPrimitive("retry_after").getAsInt())
-        .orElse(0);
+        .orDefault(0);
     }
 
     final class Entry {

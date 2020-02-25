@@ -29,6 +29,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.stream.Stream;
+import javax.inject.Inject;
 import net.kyori.kassel.channel.Channel;
 import net.kyori.kassel.channel.message.Message;
 import net.kyori.kassel.channel.message.embed.Embed;
@@ -49,16 +57,6 @@ import net.kyori.polar.snowflake.SnowflakedImpl;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.stream.Stream;
-
-import javax.inject.Inject;
 
 public final class MessageImpl extends SnowflakedImpl implements Message, Refreshable {
   private final MessageRefresher refresher;
@@ -113,7 +111,7 @@ public final class MessageImpl extends SnowflakedImpl implements Message, Refres
         final Guild guild = ((GuildChannel) channel).guild();
         this.mentionedRoles = new HashSet<>(mentionRoles.size());
         for(final JsonElement mentionRole : mentionRoles) {
-          guild.role(Json.needLong(mentionRole, "id")).ifPresent(this.mentionedRoles::add);
+          guild.role(Json.needLong(mentionRole, "id")).ifJust(this.mentionedRoles::add);
         }
       } else {
         this.mentionedRoles = Collections.emptySet();

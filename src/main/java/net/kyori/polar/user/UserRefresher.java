@@ -23,18 +23,16 @@
  */
 package net.kyori.polar.user;
 
+import javax.inject.Singleton;
 import net.kyori.kassel.user.User;
 import net.kyori.kassel.user.event.UserAvatarChangeEvent;
 import net.kyori.kassel.user.event.UserDiscriminatorChangeEvent;
 import net.kyori.kassel.user.event.UserNameChangeEvent;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.util.Optional;
-
-import javax.inject.Singleton;
 
 @Singleton
 final class UserRefresher extends Refresher<UserImpl, RefreshContext<UserImpl>> {
@@ -72,19 +70,19 @@ final class UserRefresher extends Refresher<UserImpl, RefreshContext<UserImpl>> 
         return newDiscriminator;
       }
     });
-    this.field(UserImpl::avatar, json -> Optional.ofNullable(Json.getString(json, "avatar", null)), UserImpl::avatar, (context, oldAvatar, newAvatar) -> new UserAvatarChangeEvent() {
+    this.field(UserImpl::avatar, json -> Maybe.maybe(Json.getString(json, "avatar", null)), UserImpl::avatar, (context, oldAvatar, newAvatar) -> new UserAvatarChangeEvent() {
       @Override
       public @NonNull User user() {
         return context.target();
       }
 
       @Override
-      public @NonNull Optional<String> oldAvatar() {
+      public @NonNull Maybe<String> oldAvatar() {
         return oldAvatar;
       }
 
       @Override
-      public @NonNull Optional<String> newAvatar() {
+      public @NonNull Maybe<String> newAvatar() {
         return newAvatar;
       }
     });

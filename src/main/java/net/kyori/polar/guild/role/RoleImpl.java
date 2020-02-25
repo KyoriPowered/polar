@@ -28,8 +28,12 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import java.awt.Color;
+import java.util.concurrent.ExecutorService;
+import javax.inject.Inject;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.role.Role;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.ForPolar;
 import net.kyori.polar.http.HttpClient;
@@ -41,12 +45,6 @@ import net.kyori.polar.util.Colors;
 import okhttp3.RequestBody;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.awt.Color;
-import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-
-import javax.inject.Inject;
 
 public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role {
   private final ExecutorService executor;
@@ -100,12 +98,12 @@ public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role 
   }
 
   @Override
-  public @NonNull Optional<Color> color() {
-    return Optional.ofNullable(this.color);
+  public @NonNull Maybe<Color> color() {
+    return Maybe.maybe(this.color);
   }
 
-  void color(final @NonNull Optional<Color> color) {
-    this.color = color.orElse(null);
+  void color(final @NonNull Maybe<Color> color) {
+    this.color = color.orDefault(null);
   }
 
   @Override
@@ -132,7 +130,7 @@ public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role 
   }
 
   @Override
-  public void edit(Edit edit) {
+  public void edit(final @NonNull Edit edit) {
     this.executor.submit(() -> this.httpClient.json(Endpoints.editGuildRole(this.guild.id(), this.id).request(builder -> {
       final JsonObject json = this.gson.toJsonTree(edit).getAsJsonObject();
       builder.patch(RequestBody.create(HttpClient.JSON_MEDIA_TYPE, json.toString()));

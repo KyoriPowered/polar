@@ -23,6 +23,8 @@
  */
 package net.kyori.polar.guild.role;
 
+import java.awt.Color;
+import javax.inject.Singleton;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.kassel.guild.role.event.GuildRoleColorChangeEvent;
@@ -30,16 +32,12 @@ import net.kyori.kassel.guild.role.event.GuildRoleHoistChangeEvent;
 import net.kyori.kassel.guild.role.event.GuildRoleManagedChangeEvent;
 import net.kyori.kassel.guild.role.event.GuildRoleMentionableChangeEvent;
 import net.kyori.kassel.guild.role.event.GuildRoleNameChangeEvent;
+import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import net.kyori.polar.util.Colors;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import java.awt.Color;
-import java.util.Optional;
-
-import javax.inject.Singleton;
 
 @Singleton
 final class RoleRefresher extends Refresher<RoleImpl, RoleRefresher.Context> {
@@ -66,7 +64,7 @@ final class RoleRefresher extends Refresher<RoleImpl, RoleRefresher.Context> {
         return newName;
       }
     });
-    this.field(RoleImpl::color, json -> Optional.ofNullable(Colors.color(Json.needInt(json, "color"))), RoleImpl::color, (context, oldColor, newColor) -> new GuildRoleColorChangeEvent() {
+    this.field(RoleImpl::color, json -> Maybe.maybe(Colors.color(Json.needInt(json, "color"))), RoleImpl::color, (context, oldColor, newColor) -> new GuildRoleColorChangeEvent() {
       @Override
       public @NonNull Guild guild() {
         return context.guild();
@@ -78,12 +76,12 @@ final class RoleRefresher extends Refresher<RoleImpl, RoleRefresher.Context> {
       }
 
       @Override
-      public @NonNull Optional<Color> oldColor() {
+      public @NonNull Maybe<Color> oldColor() {
         return oldColor;
       }
 
       @Override
-      public @NonNull Optional<Color> newColor() {
+      public @NonNull Maybe<Color> newColor() {
         return newColor;
       }
     });
