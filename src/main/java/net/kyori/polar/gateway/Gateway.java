@@ -218,6 +218,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
     }
 
     if(this.state == State.RESUMING) {
+      LOGGER.warn("Disconnected while resuming shard {}", this.shard.id());
       return;
     }
 
