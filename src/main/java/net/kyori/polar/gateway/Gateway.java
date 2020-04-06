@@ -165,6 +165,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
     }
     while(!this.tryConnect(factory)) {
       if(this.connectionAttempts.incrementAndGet() >= MAX_RECONNECT_ATTEMPTS) {
+        LOGGER.error("Could not connect shard {} to gateway in {} attempts", this.shard.id(), MAX_RECONNECT_ATTEMPTS);
         break;
       }
     }
@@ -172,6 +173,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
 
   private boolean tryConnect(final WebSocketFactory factory) {
     try {
+      LOGGER.info("Attempt {} to connect shard {} to gateway ({})...", this.connectionAttempts.get(), this.shard.id(), this);
       final WebSocket ws = factory.createSocket(this.url.get())
         .addHeader("Accept-Encoding", "gzip")
         .addListener(this);
