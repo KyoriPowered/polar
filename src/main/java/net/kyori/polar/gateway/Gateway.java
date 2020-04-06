@@ -368,7 +368,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       case ChannelTypes.GUILD_CATEGORY:
       case ChannelTypes.GUILD_TEXT:
       case ChannelTypes.GUILD_VOICE:
-        this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+        this.shard.guild(Json.needLong(json, "guild_id"))
+          .cast(GuildImpl.class)
           .ifJust(guild -> guild.putChannel(Json.needLong(json, "id"), json)
             .ifJust(channel -> this.bus.post(new GuildChannelCreateEvent() {
               @Override
@@ -384,7 +385,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
         break;
       case ChannelTypes.DM:
         if(Channels.hasRecipient(json)) {
-          this.client.user(Channels.recipient(json)).cast(UserImpl.class)
+          this.client.user(Channels.recipient(json))
+            .cast(UserImpl.class)
             .ifJust(user -> ((ClientImpl) this.client).privateChannel(user, Json.needLong(json, "id")));
         }
         break;
@@ -397,7 +399,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       case ChannelTypes.GUILD_CATEGORY:
       case ChannelTypes.GUILD_TEXT:
       case ChannelTypes.GUILD_VOICE:
-        this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+        this.shard.guild(Json.needLong(json, "guild_id"))
+          .cast(GuildImpl.class)
           .ifJust(guild -> guild.removeChannel(Json.needLong(json, "id"))
             .ifJust(channel -> this.bus.post(new GuildChannelDeleteEvent() {
               @Override
@@ -466,12 +469,14 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildEmojisUpdate(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+    this.shard.guild(Json.needLong(json, "guild_id"))
+      .cast(GuildImpl.class)
       .ifJust(guild -> guild.refreshEmojis(json.getAsJsonArray("emojis")));
   }
 
   private void dispatchGuildMemberAdd(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+    this.shard.guild(Json.needLong(json, "guild_id"))
+      .cast(GuildImpl.class)
       .ifJust(guild -> {
         final Member member = guild.putMember(json);
         this.bus.post(new GuildMemberAddEvent() {
@@ -489,7 +494,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildMemberRemove(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+    this.shard.guild(Json.needLong(json, "guild_id"))
+      .cast(GuildImpl.class)
       .ifJust(guild -> {
         guild.removeMember(Json.needLong(json.getAsJsonObject("user"), "id"))
           .ifJust(member -> this.bus.post(new GuildMemberRemoveEvent() {
@@ -514,7 +520,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildMembersChunk(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+    this.shard.guild(Json.needLong(json, "guild_id"))
+      .cast(GuildImpl.class)
       .ifJust(guild -> {
         for(final JsonElement member : json.getAsJsonArray("members")) {
           guild.putMember(member.getAsJsonObject());
@@ -523,7 +530,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildRoleCreate(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+    this.shard.guild(Json.needLong(json, "guild_id"))
+      .cast(GuildImpl.class)
       .ifJust(guild -> {
         final Role role = guild.putRole(json.getAsJsonObject("role"));
         this.bus.post(new GuildRoleCreateEvent() {
@@ -541,7 +549,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildRoleDelete(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "guild_id")).cast(GuildImpl.class)
+    this.shard.guild(Json.needLong(json, "guild_id"))
+      .cast(GuildImpl.class)
       .ifJust(guild -> guild.removeRole(Json.needLong(json, "role_id")).ifJust(role -> {
         this.bus.post(new GuildRoleDeleteEvent() {
           @Override
@@ -566,7 +575,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   private void dispatchGuildUpdate(final JsonObject json) {
-    this.shard.guild(Json.needLong(json, "id")).cast(Refreshable.class)
+    this.shard.guild(Json.needLong(json, "id"))
+      .cast(Refreshable.class)
       .ifJust(guild -> guild.refresh(json));
   }
 
@@ -599,7 +609,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       this.shard.guild(Json.needLong(json, "guild_id"))
         .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
         .ifJust(channel -> {
-          final Snowflaked message = channel.removeMessage(Json.needLong(json, "id")).cast(Snowflaked.class)
+          final Snowflaked message = channel.removeMessage(Json.needLong(json, "id"))
+            .cast(Snowflaked.class)
             .orGet(() -> new SnowflakedImpl(Json.needLong(json, "id")));
           this.bus.post(new ChannelMessageDeleteEvent() {
             @Override
@@ -624,7 +635,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
         .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
         .ifJust(channel -> {
           for(final JsonElement id : json.getAsJsonArray("ids")) {
-            final Snowflaked message = channel.removeMessage(Json.needLong(id, "id")).cast(Snowflaked.class)
+            final Snowflaked message = channel.removeMessage(Json.needLong(id, "id"))
+              .cast(Snowflaked.class)
               .orGet(() -> new SnowflakedImpl(Json.needLong(id, "id")));
             this.bus.post(new ChannelMessageDeleteEvent() {
               @Override
@@ -649,9 +661,11 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       this.shard.guild(Json.needLong(json, "guild_id"))
         .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
         .ifJust(channel -> {
-          final Snowflaked message = channel.message(Json.needLong(json, "message_id")).cast(Snowflaked.class)
+          final Snowflaked message = channel.message(Json.needLong(json, "message_id"))
+            .cast(Snowflaked.class)
             .orGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
-          final Snowflaked user = this.client.user(Json.needLong(json, "user_id")).cast(Snowflaked.class)
+          final Snowflaked user = this.client.user(Json.needLong(json, "user_id"))
+            .cast(Snowflaked.class)
             .orGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
           final Emoji emoji = Emojis.from(json.getAsJsonObject("emoji"));
           this.bus.post(new ChannelMessageReactionAddEvent() {
@@ -686,9 +700,11 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       this.shard.guild(Json.needLong(json, "guild_id"))
         .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
         .ifJust(channel -> {
-          final Snowflaked message = channel.message(Json.needLong(json, "message_id")).cast(Snowflaked.class)
+          final Snowflaked message = channel.message(Json.needLong(json, "message_id"))
+            .cast(Snowflaked.class)
             .orGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
-          final Snowflaked user = this.client.user(Json.needLong(json, "user_id")).cast(Snowflaked.class)
+          final Snowflaked user = this.client.user(Json.needLong(json, "user_id"))
+            .cast(Snowflaked.class)
             .orGet(() -> new SnowflakedImpl(Json.needLong(json, "user_id")));
           final Emoji emoji = Emojis.from(json.getAsJsonObject("emoji"));
           this.bus.post(new ChannelMessageReactionRemoveEvent() {
@@ -723,7 +739,8 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       this.shard.guild(Json.needLong(json, "guild_id"))
         .flatMap(guild -> guild.channel(Json.needLong(json, "channel_id")).cast(GuildTextChannelImpl.class))
         .ifJust(channel -> {
-          final Snowflaked message = channel.message(Json.needLong(json, "message_id")).cast(Snowflaked.class)
+          final Snowflaked message = channel.message(Json.needLong(json, "message_id"))
+            .cast(Snowflaked.class)
             .orGet(() -> new SnowflakedImpl(Json.needLong(json, "message_id")));
           this.bus.post(new ChannelMessageReactionClearEvent() {
             @Override

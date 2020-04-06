@@ -31,6 +31,7 @@ public interface Channels {
   static boolean hasRecipient(final JsonObject object) {
     return Json.isArray(object, "recipients") || Json.isObject(object, "recipient");
   }
+
   static @Snowflake long recipient(final JsonObject object) {
     final JsonObject recipient;
     if(object.has("recipients")) {

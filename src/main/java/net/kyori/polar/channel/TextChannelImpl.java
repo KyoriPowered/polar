@@ -105,7 +105,7 @@ public class TextChannelImpl implements TextChannel {
           future.completeExceptionally(throwable);
         } else {
           element.map(JsonElement::getAsJsonObject)
-            .ifJust(object -> future.complete(TextChannelImpl.this.messageFactory.create(TextChannelImpl.this.channel, object)));
+            .ifJust(object -> future.complete(this.messageFactory.create(this.channel, object)));
         }
       }));
     return future;

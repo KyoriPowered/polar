@@ -50,11 +50,11 @@ public abstract class Refresher<T, C extends RefreshContext<T>> {
   }
 
   protected final <V> void field(final Function<T, V> oldValue, final Function<JsonObject, V> newValue, final BiConsumer<T, V> applier, final RefreshEventFactory<C, V> event) {
-    this.field(oldValue, null, newValue, applier, event);
+    this.entries.add(new SimpleEntry<>(oldValue, newValue, applier, event));
   }
 
   protected final <V> void field(final Function<T, V> oldValue, final Predicate<JsonObject> newValueAvailable, final Function<JsonObject, V> newValue, final BiConsumer<T, V> applier, final RefreshEventFactory<C, V> event) {
-    this.entries.add(new SimpleEntry<>(oldValue, newValueAvailable, newValue, applier, event));
+    this.entries.add(new MaybeSimpleEntry<>(oldValue, newValueAvailable, newValue, applier, event));
   }
 
   public final void refresh(final C context, final JsonElement json) {
@@ -96,26 +96,33 @@ public abstract class Refresher<T, C extends RefreshContext<T>> {
   }
 
   public class SimpleEntry<V> extends Entry<V> {
-    final @Nullable Predicate<JsonObject> newValueAvailable;
     final RefreshEventFactory<C, V> event;
 
-    SimpleEntry(final Function<T, V> oldValue, final @Nullable Predicate<JsonObject> newValueAvailable, final Function<JsonObject, V> newValue, final BiConsumer<T, V> applier, final RefreshEventFactory<C, V> event) {
+    SimpleEntry(final Function<T, V> oldValue, final Function<JsonObject, V> newValue, final BiConsumer<T, V> applier, final RefreshEventFactory<C, V> event) {
       super(oldValue, newValue, applier);
-      this.newValueAvailable = newValueAvailable;
       this.event = event;
-    }
-
-    @Override
-    void refresh(final C context, final JsonObject json) {
-      if(this.newValueAvailable != null && !this.newValueAvailable.test(json)) {
-        return;
-      }
-      super.refresh(context, json);
     }
 
     @Override
     void refresh(final C context, final V oldValue, final V newValue) {
       Refresher.this.bus.post(this.event.apply(context, oldValue, newValue));
+    }
+  }
+
+  public class MaybeSimpleEntry<V> extends SimpleEntry<V> {
+    final Predicate<JsonObject> newValueAvailable;
+
+    MaybeSimpleEntry(final Function<T, V> oldValue, final Predicate<JsonObject> newValueAvailable, final Function<JsonObject, V> newValue, final BiConsumer<T, V> applier, final RefreshEventFactory<C, V> event) {
+      super(oldValue, newValue, applier, event);
+      this.newValueAvailable = newValueAvailable;
+    }
+
+    @Override
+    void refresh(final C context, final JsonObject json) {
+      if(!this.newValueAvailable.test(json)) {
+        return;
+      }
+      super.refresh(context, json);
     }
   }
 

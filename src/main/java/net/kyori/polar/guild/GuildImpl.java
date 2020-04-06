@@ -32,7 +32,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.function.LongConsumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import net.kyori.kassel.channel.Channel;
@@ -212,6 +215,14 @@ public final class GuildImpl extends SnowflakedImpl implements Guild, Refreshabl
 
   public @NonNull Maybe<Member> removeMember(final @Snowflake long id) {
     return Maybe.maybe(this.members.remove(id));
+  }
+
+  public static Set<Role> roles(final Guild guild, final long[] roles) {
+    return Arrays.stream(roles)
+      .mapToObj(guild::role)
+      .filter(Maybe::isJust)
+      .map(Maybe::orThrow)
+      .collect(Collectors.toSet());
   }
 
   @Override

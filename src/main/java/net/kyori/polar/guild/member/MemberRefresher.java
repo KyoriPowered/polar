@@ -27,9 +27,7 @@ import com.google.common.collect.Sets;
 import com.google.gson.JsonElement;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.inject.Singleton;
 import net.kyori.kassel.guild.Guild;
 import net.kyori.kassel.guild.member.Member;
@@ -39,6 +37,7 @@ import net.kyori.kassel.guild.member.event.GuildMemberRoleRemoveEvent;
 import net.kyori.kassel.guild.role.Role;
 import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
+import net.kyori.polar.guild.GuildImpl;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -77,17 +76,9 @@ final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Contex
     }, MemberImpl::roles, (context, oldValue, newValue) -> {
       final Guild guild = context.guild();
       final Member member = context.target();
-      final Set<Role> oldRoles = Arrays.stream(oldValue.toLongArray())
-        .mapToObj(guild::role)
-        .filter(Maybe::isJust)
-        .map(Maybe::orThrow)
-        .collect(Collectors.toSet());
-      final Set<Role> newRoles = Arrays.stream(newValue.toLongArray())
-        .mapToObj(guild::role)
-        .filter(Maybe::isJust)
-        .map(Maybe::orThrow)
-        .collect(Collectors.toSet());
-      Sets.difference(newRoles, oldRoles).forEach(role -> MemberRefresher.this.bus.post(new GuildMemberRoleAddEvent() {
+      final Set<Role> oldRoles = GuildImpl.roles(guild, oldValue.toLongArray());
+      final Set<Role> newRoles = GuildImpl.roles(guild, newValue.toLongArray());
+      Sets.difference(newRoles, oldRoles).forEach(role -> this.bus.post(new GuildMemberRoleAddEvent() {
         @Override
         public @NonNull Guild guild() {
           return guild;
@@ -103,7 +94,7 @@ final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Contex
           return role;
         }
       }));
-      Sets.difference(oldRoles, newRoles).forEach(role -> MemberRefresher.this.bus.post(new GuildMemberRoleRemoveEvent() {
+      Sets.difference(oldRoles, newRoles).forEach(role -> this.bus.post(new GuildMemberRoleRemoveEvent() {
         @Override
         public @NonNull Guild guild() {
           return guild;
