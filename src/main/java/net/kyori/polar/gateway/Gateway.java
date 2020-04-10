@@ -96,6 +96,7 @@ import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.shard.Shard;
 import net.kyori.polar.snowflake.SnowflakedImpl;
 import net.kyori.polar.user.Activities;
+import net.kyori.polar.user.Statuses;
 import net.kyori.polar.user.UserImpl;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -272,10 +273,10 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
   }
 
   public void presence(final @NonNull Status status, final @Nullable Activity activityType, final @Nullable String activityName) {
-    this.ws.sendText(GatewayPayload.create(GatewayOpcode.STATUS_UPDATE, (d) -> {
+    this.ws.sendText(GatewayPayload.create(GatewayOpcode.STATUS_UPDATE, d -> {
       d.addProperty("afk", false);
-      d.add("since", JsonNull.INSTANCE);
-      d.addProperty("status", status.name().toLowerCase(Locale.ENGLISH));
+      d.add("since", JsonNull.INSTANCE); // null means not idle
+      d.addProperty("status", Statuses.status(status));
       if(activityType != null && activityName != null) {
         d.add("game", Composer.accept(new JsonObject(), game -> {
           game.addProperty("type", Activities.activity(activityType));
@@ -573,7 +574,9 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
     this.shard.guild(Json.needLong(json, "guild_id"))
       .ifJust(guild -> {
         final JsonObject roleJson = json.getAsJsonObject("role");
-        guild.role(Json.needLong(roleJson, "id")).cast(Refreshable.class).ifJust(role -> role.refresh(roleJson));
+        guild.role(Json.needLong(roleJson, "id"))
+          .cast(Refreshable.class)
+          .ifJust(role -> role.refresh(roleJson));
       });
   }
 
