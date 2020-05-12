@@ -24,9 +24,7 @@
 package net.kyori.polar.guild.member;
 
 import com.google.common.collect.Sets;
-import com.google.gson.JsonElement;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
-import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.Set;
 import javax.inject.Singleton;
 import net.kyori.kassel.guild.Guild;
@@ -38,6 +36,7 @@ import net.kyori.kassel.guild.role.Role;
 import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.guild.GuildImpl;
+import net.kyori.polar.guild.role.RoleImpl;
 import net.kyori.polar.refresh.RefreshContext;
 import net.kyori.polar.refresh.Refresher;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -68,11 +67,7 @@ final class MemberRefresher extends Refresher<MemberImpl, MemberRefresher.Contex
       }
     });
     this.complexField(member -> new LongArraySet(member.roles.roles), json -> {
-      final LongSet roles = new LongArraySet();
-      for(final JsonElement role : json.getAsJsonArray("roles")) {
-        roles.add(Json.needLong(role, "id"));
-      }
-      return roles;
+      return RoleImpl.roles(json.getAsJsonArray("roles"));
     }, MemberImpl::roles, (context, oldValue, newValue) -> {
       final Guild guild = context.guild();
       final Member member = context.target();

@@ -25,9 +25,12 @@ package net.kyori.polar.guild.role;
 
 import com.google.common.base.MoreObjects;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.assistedinject.Assisted;
+import it.unimi.dsi.fastutil.longs.LongArraySet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import java.awt.Color;
 import java.util.concurrent.ExecutorService;
 import javax.inject.Inject;
@@ -58,6 +61,14 @@ public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role 
   private boolean managed;
   private boolean hoist;
 
+  public static LongSet roles(final JsonArray array) {
+    final LongSet roles = new LongArraySet(array.size());
+    for(final JsonElement role : array) {
+      roles.add(Json.needLong(role, "id"));
+    }
+    return roles;
+  }
+
   @Inject
   private RoleImpl(final ExecutorService executor, final RateLimitedHttpClient httpClient, final @ForPolar Gson gson, final RoleRefresher refresher, final @Assisted Guild guild, final @Assisted JsonObject json) {
     super(Json.needLong(json, "id"));
@@ -82,7 +93,7 @@ public final class RoleImpl extends SnowflakedImpl implements Refreshable, Role 
       }
 
       @Override
-      public RoleImpl target() {
+      public @NonNull RoleImpl target() {
         return RoleImpl.this;
       }
     }, json);

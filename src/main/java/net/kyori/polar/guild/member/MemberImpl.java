@@ -40,6 +40,7 @@ import net.kyori.kassel.user.User;
 import net.kyori.mu.Maybe;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.client.ClientImpl;
+import net.kyori.polar.guild.role.RoleImpl;
 import net.kyori.polar.http.endpoint.Endpoints;
 import net.kyori.polar.refresh.Refreshable;
 import net.kyori.polar.util.Equality;
@@ -65,9 +66,7 @@ public final class MemberImpl implements Member, Refreshable {
     this.nick = Json.getString(json, "nick", null);
 
     if(Json.isArray(json, "roles")) {
-      for(final JsonElement role : json.getAsJsonArray("roles")) {
-        this.roles.roles.add(Json.needLong(role, "id"));
-      }
+      this.roles.set(RoleImpl.roles(json.getAsJsonArray("roles")));
     }
   }
 
@@ -87,6 +86,11 @@ public final class MemberImpl implements Member, Refreshable {
   }
 
   @Override
+  public @NonNull Guild guild() {
+    return this.guild;
+  }
+
+  @Override
   public @NonNull User user() {
     return this.user;
   }
@@ -94,6 +98,10 @@ public final class MemberImpl implements Member, Refreshable {
   @Override
   public @NonNull Maybe<String> nick() {
     return Maybe.maybe(this.nick);
+  }
+
+  void nick(final @NonNull Maybe<String> nick) {
+    this.nick = nick.orDefault(null);
   }
 
   @Override
@@ -105,13 +113,9 @@ public final class MemberImpl implements Member, Refreshable {
     this.roles.set(roles);
   }
 
-  void nick(final @NonNull Maybe<String> nick) {
-    this.nick = nick.orDefault(null);
-  }
-
   @Override
   public boolean equals(final Object other) {
-    return Equality.equals(this, other, that -> this.user.id() == that.user.id());
+    return Equality.equals(this, other, that -> this.guild.id() == that.guild.id() && this.user.id() == that.user.id());
   }
 
   @Override

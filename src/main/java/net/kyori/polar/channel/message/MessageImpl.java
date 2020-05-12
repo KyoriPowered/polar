@@ -130,7 +130,7 @@ public final class MessageImpl extends SnowflakedImpl implements Message, Refres
       }
 
       @Override
-      public MessageImpl target() {
+      public @NonNull MessageImpl target() {
         return MessageImpl.this;
       }
     }, json);

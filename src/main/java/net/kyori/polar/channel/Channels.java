@@ -32,7 +32,7 @@ public interface Channels {
     return Json.isArray(object, "recipients") || Json.isObject(object, "recipient");
   }
 
-  static @Snowflake long recipient(final JsonObject object) {
+  static @Snowflake long firstRecipient(final JsonObject object) {
     final JsonObject recipient;
     if(object.has("recipients")) {
       recipient = object.getAsJsonArray("recipients").get(0).getAsJsonObject();

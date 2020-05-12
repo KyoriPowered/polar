@@ -57,7 +57,7 @@ public final class GuildVoiceChannelImpl extends SnowflakedImpl implements Guild
       }
 
       @Override
-      public GuildVoiceChannelImpl target() {
+      public @NonNull GuildVoiceChannelImpl target() {
         return GuildVoiceChannelImpl.this;
       }
     }, json);

@@ -66,6 +66,9 @@ import org.slf4j.LoggerFactory;
 public final class ClientImpl implements Client {
   private static final Logger LOGGER = LoggerFactory.getLogger(ClientImpl.class);
 
+  private final ExecutorService executor;
+  private final RateLimitedHttpClient httpClient;
+
   private final List<Shard> shards;
 
   // Users
@@ -74,8 +77,6 @@ public final class ClientImpl implements Client {
 
   // Channels
   private final Long2ObjectMap<Channel> channels = new Long2ObjectOpenHashMap<>();
-  private final ExecutorService executor;
-  private final RateLimitedHttpClient httpClient;
   private final PrivateChannelImpl.Factory channelFactory;
 
   // Presence
@@ -176,7 +177,7 @@ public final class ClientImpl implements Client {
           } else {
             element.map(JsonElement::getAsJsonObject)
               .ifJust(object -> {
-                final @Snowflake long id = Channels.recipient(object);
+                final @Snowflake long id = Channels.firstRecipient(object);
                 future.complete(this.privateChannel(user, id));
               });
           }

@@ -24,6 +24,7 @@
 package net.kyori.polar.gateway;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
@@ -41,12 +42,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -83,6 +86,7 @@ import net.kyori.kassel.snowflake.Snowflaked;
 import net.kyori.kassel.user.Activity;
 import net.kyori.kassel.user.Status;
 import net.kyori.mu.Composer;
+import net.kyori.mu.exception.Exceptions;
 import net.kyori.peppermint.Json;
 import net.kyori.polar.PolarConfiguration;
 import net.kyori.polar.channel.ChannelTypes;
@@ -177,12 +181,21 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
       LOGGER.info("Attempt {} to connect shard {} to gateway ({})...", this.connectionAttempts.get(), this.shard.id(), this);
       final WebSocket ws = factory.createSocket(this.url.get())
         .addHeader("Accept-Encoding", "gzip")
+        .setPingInterval(1)
         .addListener(this);
-      ws.connect();
+      final ExecutorService executor = MoreExecutors.newDirectExecutorService();
+      try {
+        ws.connect(executor).get(30, TimeUnit.SECONDS);
+      } catch(final ExecutionException | InterruptedException | TimeoutException e) {
+        LOGGER.error("Encountered an exception while connecting to socket", Exceptions.unwrap(e));
+        return false;
+      } finally {
+        executor.shutdown();
+      }
       this.ws = ws;
       this.connectionAttempts.set(0);
       return true;
-    } catch(final IOException | WebSocketException e) {
+    } catch(final IOException e) {
       LOGGER.error("Encountered an exception while creating socket", e);
       return false;
     }
@@ -389,7 +402,7 @@ public final class Gateway extends WebSocketAdapter implements Connectable {
         break;
       case ChannelTypes.DM:
         if(Channels.hasRecipient(json)) {
-          this.client.user(Channels.recipient(json))
+          this.client.user(Channels.firstRecipient(json))
             .cast(UserImpl.class)
             .ifJust(user -> ((ClientImpl) this.client).privateChannel(user, Json.needLong(json, "id")));
         }

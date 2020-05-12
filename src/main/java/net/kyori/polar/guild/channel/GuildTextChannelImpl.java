@@ -69,7 +69,7 @@ public final class GuildTextChannelImpl extends SnowflakedImpl implements GuildT
       }
 
       @Override
-      public GuildTextChannelImpl target() {
+      public @NonNull GuildTextChannelImpl target() {
         return GuildTextChannelImpl.this;
       }
     }, json);
